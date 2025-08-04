@@ -1,6 +1,7 @@
 import { Search, Bell, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface HeaderProps {
   title: string;
@@ -9,26 +10,30 @@ interface HeaderProps {
 }
 
 export default function Header({ title, subtitle, showNewTicketButton = true }: HeaderProps) {
+  const isMobile = useIsMobile();
+
   return (
-    <header className="bg-white shadow-sm border-b border-gray-200 px-6 py-4">
+    <header className="bg-white shadow-sm border-b border-gray-200 px-4 lg:px-6 py-4">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold text-gray-900">{title}</h1>
+        <div className={isMobile ? "ml-12" : ""}>
+          <h1 className="text-xl lg:text-2xl font-semibold text-gray-900">{title}</h1>
           {subtitle && (
             <p className="text-sm text-gray-500 mt-1">{subtitle}</p>
           )}
         </div>
-        <div className="flex items-center space-x-4">
-          {/* Search */}
-          <div className="relative">
-            <Input
-              data-testid="input-search"
-              type="text"
-              placeholder="Buscar chamados..."
-              className="w-64 pl-10"
-            />
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-          </div>
+        <div className="flex items-center space-x-2 lg:space-x-4">
+          {/* Search - Hidden on small mobile */}
+          {!isMobile && (
+            <div className="relative">
+              <Input
+                data-testid="input-search"
+                type="text"
+                placeholder="Buscar chamados..."
+                className="w-48 lg:w-64 pl-10"
+              />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+            </div>
+          )}
           
           {/* Notifications */}
           <button 
@@ -43,9 +48,14 @@ export default function Header({ title, subtitle, showNewTicketButton = true }: 
           
           {/* New Ticket Button */}
           {showNewTicketButton && (
-            <Button data-testid="button-new-ticket" className="bg-primary hover:bg-primary-600">
-              <Plus className="w-4 h-4 mr-2" />
-              Novo Chamado
+            <Button 
+              data-testid="button-new-ticket" 
+              className="bg-primary hover:bg-primary-600"
+              size={isMobile ? "sm" : "default"}
+            >
+              <Plus className="w-4 h-4 mr-1 lg:mr-2" />
+              <span className="hidden sm:inline">Novo Chamado</span>
+              <span className="sm:hidden">Novo</span>
             </Button>
           )}
         </div>

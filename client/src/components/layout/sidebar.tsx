@@ -1,4 +1,5 @@
 import { Link, useLocation } from "wouter";
+import { useState } from "react";
 import { 
   Home, 
   Plus, 
@@ -13,9 +14,12 @@ import {
   Gauge, 
   Download,
   TicketIcon,
-  Settings
+  Settings,
+  Menu,
+  X
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 
 const navigation = [
   { name: "Dashboard", href: "/", icon: Home },
@@ -38,11 +42,68 @@ const reports = [
   { name: "Exportar", href: "/export", icon: Download },
 ];
 
-export default function Sidebar() {
+interface SidebarProps {
+  isMobile?: boolean;
+}
+
+export default function Sidebar({ isMobile }: SidebarProps) {
   const [location] = useLocation();
+  const [isOpen, setIsOpen] = useState(false);
+
+  const toggleSidebar = () => setIsOpen(!isOpen);
+  const closeSidebar = () => setIsOpen(false);
+
+  if (isMobile) {
+    return (
+      <>
+        {/* Mobile Menu Button */}
+        <Button
+          variant="outline"
+          size="icon"
+          className="fixed top-4 left-4 z-50 lg:hidden bg-white shadow-md"
+          onClick={toggleSidebar}
+          data-testid="mobile-menu-button"
+        >
+          <Menu className="h-4 w-4" />
+        </Button>
+
+        {/* Mobile Overlay */}
+        {isOpen && (
+          <div
+            className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+            onClick={closeSidebar}
+          />
+        )}
+
+        {/* Mobile Sidebar */}
+        <div
+          className={cn(
+            "fixed left-0 top-0 h-full w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out z-50 lg:hidden",
+            isOpen ? "translate-x-0" : "-translate-x-full"
+          )}
+        >
+          <SidebarContent location={location} onItemClick={closeSidebar} isMobile={true} />
+        </div>
+      </>
+    );
+  }
 
   return (
-    <div className="w-64 bg-white shadow-sm border-r border-gray-200 flex flex-col">
+    <div className="hidden lg:flex w-64 bg-white shadow-sm border-r border-gray-200 flex-col">
+      <SidebarContent location={location} />
+    </div>
+  );
+}
+
+interface SidebarContentProps {
+  location: string;
+  onItemClick?: () => void;
+  isMobile?: boolean;
+}
+
+function SidebarContent({ location, onItemClick, isMobile }: SidebarContentProps) {
+  return (
+    <>
       {/* Logo */}
       <div className="p-6 border-b border-gray-200">
         <div className="flex items-center space-x-3">
@@ -63,6 +124,7 @@ export default function Sidebar() {
               <Link key={item.name} href={item.href}>
                 <a
                   data-testid={`nav-${item.name.toLowerCase().replace(/\s+/g, '-')}`}
+                  onClick={onItemClick}
                   className={cn(
                     "nav-item flex items-center space-x-3 px-3 py-2 rounded-lg font-medium",
                     isActive
@@ -89,6 +151,7 @@ export default function Sidebar() {
               <Link key={item.name} href={item.href}>
                 <a
                   data-testid={`nav-${item.name.toLowerCase().replace(/\s+/g, '-')}`}
+                  onClick={onItemClick}
                   className={cn(
                     "nav-item flex items-center space-x-3 px-3 py-2 rounded-lg",
                     isActive
@@ -115,6 +178,7 @@ export default function Sidebar() {
               <Link key={item.name} href={item.href}>
                 <a
                   data-testid={`nav-${item.name.toLowerCase().replace(/\s+/g, '-')}`}
+                  onClick={onItemClick}
                   className={cn(
                     "nav-item flex items-center space-x-3 px-3 py-2 rounded-lg",
                     isActive
@@ -149,6 +213,6 @@ export default function Sidebar() {
           </button>
         </div>
       </div>
-    </div>
+    </>
   );
 }

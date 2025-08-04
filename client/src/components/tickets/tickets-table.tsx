@@ -6,13 +6,16 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useIsMobile } from "@/hooks/use-mobile";
 import AdvancedFilter from "./advanced-filter";
+import MobileTicketCard from "./mobile-ticket-card";
 import type { Ticket, Queue, Label } from "@shared/schema";
 import type { TicketFilters } from "@/lib/types";
 
 export default function TicketsTable() {
   const [filters, setFilters] = useState<TicketFilters>({});
   const [showAdvancedFilter, setShowAdvancedFilter] = useState(false);
+  const isMobile = useIsMobile();
 
   const { data: tickets = [], isLoading } = useQuery<Ticket[]>({
     queryKey: ["/api/tickets"],
@@ -143,8 +146,24 @@ export default function TicketsTable() {
           </div>
         </div>
         
-        <div className="overflow-x-auto">
-          <Table>
+        {/* Mobile View */}
+        {isMobile ? (
+          <div className="p-4">
+            {tickets.map((ticket) => (
+              <MobileTicketCard
+                key={ticket.id}
+                ticket={ticket}
+                getPriorityLabel={getPriorityLabel}
+                getPriorityVariant={getPriorityVariant}
+                getStatusLabel={getStatusLabel}
+                getStatusVariant={getStatusVariant}
+              />
+            ))}
+          </div>
+        ) : (
+          /* Desktop View */
+          <div className="overflow-x-auto">
+            <Table>
             <TableHeader>
               <TableRow className="bg-gray-50">
                 <TableHead>ID</TableHead>
@@ -248,7 +267,8 @@ export default function TicketsTable() {
               })}
             </TableBody>
           </Table>
-        </div>
+          </div>
+        )}
         
         <div className="px-6 py-4 border-t border-gray-200">
           <div className="flex items-center justify-between">

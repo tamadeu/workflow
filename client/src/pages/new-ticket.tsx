@@ -11,8 +11,8 @@ export default function NewTicket() {
       />
       
       <main className="flex-1 overflow-y-auto">
-        <div className="p-6">
-          <div className="max-w-4xl">
+        <div className="p-4 sm:p-6">
+          <div className="max-w-4xl mx-auto">
             <TicketForm />
           </div>
         </div>

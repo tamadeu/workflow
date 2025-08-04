@@ -18,11 +18,14 @@ import Analytics from "@/pages/analytics";
 import SLAMonitor from "@/pages/sla-monitor";
 import Export from "@/pages/export";
 import Sidebar from "@/components/layout/sidebar";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 function Router() {
+  const isMobile = useIsMobile();
+
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50">
-      <Sidebar />
+      <Sidebar isMobile={isMobile} />
       <div className="flex-1 flex flex-col overflow-hidden">
         <Switch>
           <Route path="/" component={Dashboard} />

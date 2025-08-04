@@ -10,11 +10,11 @@ export default function StatsCards() {
 
   if (isLoading || !stats) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
         {[...Array(4)].map((_, i) => (
           <Card key={i} className="animate-pulse">
-            <CardContent className="p-6">
-              <div className="h-20 bg-gray-200 rounded"></div>
+            <CardContent className="p-3 sm:p-6">
+              <div className="h-16 sm:h-20 bg-gray-200 rounded"></div>
             </CardContent>
           </Card>
         ))}
@@ -62,33 +62,34 @@ export default function StatsCards() {
   ];
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
       {cards.map((card, index) => {
         const Icon = card.icon;
         const TrendIcon = card.trendUp ? TrendingUp : TrendingDown;
         return (
           <Card key={index} className="shadow-sm border border-gray-200">
-            <CardContent className="p-6">
+            <CardContent className="p-3 sm:p-6">
               <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">{card.title}</p>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs sm:text-sm font-medium text-gray-600 truncate">{card.title}</p>
                   <p 
                     data-testid={`stat-${card.title.toLowerCase().replace(/\s+/g, '-')}`}
-                    className="text-3xl font-bold text-gray-900 mt-2"
+                    className="text-lg sm:text-3xl font-bold text-gray-900 mt-1 sm:mt-2"
                   >
                     {card.value}
                   </p>
                   <p 
-                    className={`text-sm mt-1 flex items-center ${
+                    className={`text-xs sm:text-sm mt-1 flex items-center ${
                       card.trendUp ? 'text-green-600' : 'text-red-600'
                     }`}
                   >
                     <TrendIcon className="w-3 h-3 mr-1" />
-                    {card.trend}
+                    <span className="hidden sm:inline">{card.trend}</span>
+                    <span className="sm:hidden">{card.trendUp ? '+' : '-'}</span>
                   </p>
                 </div>
-                <div className={`w-12 h-12 ${card.iconBg} rounded-lg flex items-center justify-center`}>
-                  <Icon className={`w-6 h-6 ${card.iconColor}`} />
+                <div className={`w-8 h-8 sm:w-12 sm:h-12 ${card.iconBg} rounded-lg flex items-center justify-center ml-2`}>
+                  <Icon className={`w-4 h-4 sm:w-6 sm:h-6 ${card.iconColor}`} />
                 </div>
               </div>
             </CardContent>

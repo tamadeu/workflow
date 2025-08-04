@@ -14,28 +14,30 @@ export default function Dashboard() {
       />
       
       <main className="flex-1 overflow-y-auto">
-        <div className="p-6">
+        <div className="p-4 sm:p-6">
           {/* Dashboard Stats */}
-          <div className="mb-8">
+          <div className="mb-6 sm:mb-8">
             <StatsCards />
           </div>
 
           {/* Quick Actions */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8 mb-6 sm:mb-8">
             {/* New Ticket Form */}
             <div className="lg:col-span-2">
               <TicketForm />
             </div>
 
             {/* Quick Stats */}
-            <div className="space-y-6">
+            <div className="space-y-4 sm:space-y-6">
               <EmailIntegration />
               <SLAMonitor />
             </div>
           </div>
 
           {/* Recent Tickets Table */}
-          <TicketsTable />
+          <div className="overflow-x-auto">
+            <TicketsTable />
+          </div>
         </div>
       </main>
     </>
