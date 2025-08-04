@@ -18,7 +18,8 @@ import {
   Edit3,
   MoreHorizontal,
   Timer,
-  Tag
+  Tag,
+  Info
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -31,6 +32,7 @@ import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -51,6 +53,7 @@ export default function TicketDetails() {
   const [newComment, setNewComment] = useState("");
   const [isInternal, setIsInternal] = useState(false);
   const [showInternalComments, setShowInternalComments] = useState(true);
+  const [mobileTab, setMobileTab] = useState("thread");
   const isMobile = useIsMobile();
 
   const { toast } = useToast();
@@ -353,10 +356,10 @@ export default function TicketDetails() {
           isMobile ? "overflow-y-auto" : "flex overflow-hidden"
         )}>
           {isMobile ? (
-            /* Mobile Layout - Single Column */
-            <div className="p-4 space-y-4 pb-20">
-              {/* Ticket Title & Description */}
-              <div className="bg-white rounded-lg border border-gray-200 p-4">
+            /* Mobile Layout - Tabs */
+            <div className="flex-1 flex flex-col pb-20">
+              {/* Ticket Title & Description - Always visible */}
+              <div className="bg-white border-b border-gray-200 p-4">
                 <h2 className="text-lg font-semibold text-gray-900 mb-3">
                   {ticket.title}
                 </h2>
@@ -386,108 +389,276 @@ export default function TicketDetails() {
                 )}
               </div>
 
-              {/* Comments Section */}
-              <div className="bg-white rounded-lg border border-gray-200">
-                <div className="p-4 border-b border-gray-200">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-base font-medium flex items-center">
-                      <MessageCircle className="w-4 h-4 mr-2" />
-                      Conversação ({filteredComments.length})
-                    </h3>
-                    <div className="flex items-center space-x-1">
-                      <EyeOff className="w-3 h-3 text-gray-500" />
-                      <Switch
-                        checked={showInternalComments}
-                        onCheckedChange={setShowInternalComments}
-                      />
-                      <Eye className="w-3 h-3 text-gray-500" />
+              {/* Tabs */}
+              <Tabs value={mobileTab} onValueChange={setMobileTab} className="flex-1 flex flex-col">
+                <TabsList className="grid w-full grid-cols-2 bg-gray-50 border-b border-gray-200 rounded-none">
+                  <TabsTrigger value="thread" className="flex items-center space-x-2">
+                    <MessageCircle className="w-4 h-4" />
+                    <span>Thread ({filteredComments.length})</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="details" className="flex items-center space-x-2">
+                    <Info className="w-4 h-4" />
+                    <span>Detalhes</span>
+                  </TabsTrigger>
+                </TabsList>
+
+                {/* Thread Tab */}
+                <TabsContent value="thread" className="flex-1 flex flex-col overflow-hidden m-0">
+                  <div className="p-4 border-b border-gray-200 bg-white">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-base font-medium">
+                        Conversação ({filteredComments.length})
+                      </h3>
+                      <div className="flex items-center space-x-1">
+                        <EyeOff className="w-3 h-3 text-gray-500" />
+                        <Switch
+                          checked={showInternalComments}
+                          onCheckedChange={setShowInternalComments}
+                        />
+                        <Eye className="w-3 h-3 text-gray-500" />
+                      </div>
                     </div>
                   </div>
-                </div>
-                
-                {/* Comments List */}
-                <div className="p-4 space-y-4">
-                  {filteredComments.length > 0 ? (
-                    filteredComments.map((comment) => (
-                      <div
-                        key={comment.id}
-                        className={cn(
-                          "flex space-x-3 p-3 rounded-lg border",
-                          comment.isInternal 
-                            ? "bg-yellow-50 border-yellow-200" 
-                            : "bg-gray-50 border-gray-200"
-                        )}
-                      >
-                        <Avatar className="flex-shrink-0">
-                          <AvatarFallback className="text-sm">
-                            {getInitials(comment.author?.name)}
-                          </AvatarFallback>
-                        </Avatar>
-                        
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center space-x-2 mb-1">
-                            <span className="font-medium text-gray-900 text-sm">
-                              {comment.author?.name || "Usuário"}
-                            </span>
-                            <span className="text-xs text-gray-500">
-                              {getTimeAgo(comment.createdAt)}
-                            </span>
-                            {comment.isInternal && (
-                              <Badge variant="outline" className="text-xs">
-                                Interno
-                              </Badge>
-                            )}
+                  
+                  {/* Comments List - Scrollable */}
+                  <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
+                    {filteredComments.length > 0 ? (
+                      filteredComments.map((comment) => (
+                        <div
+                          key={comment.id}
+                          className={cn(
+                            "flex space-x-3 p-3 rounded-lg border",
+                            comment.isInternal 
+                              ? "bg-yellow-50 border-yellow-200" 
+                              : "bg-white border-gray-200"
+                          )}
+                        >
+                          <Avatar className="flex-shrink-0">
+                            <AvatarFallback className="text-sm">
+                              {getInitials(comment.author?.name)}
+                            </AvatarFallback>
+                          </Avatar>
+                          
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center space-x-2 mb-1">
+                              <span className="font-medium text-gray-900 text-sm">
+                                {comment.author?.name || "Usuário"}
+                              </span>
+                              <span className="text-xs text-gray-500">
+                                {getTimeAgo(comment.createdAt)}
+                              </span>
+                              {comment.isInternal && (
+                                <Badge variant="outline" className="text-xs">
+                                  Interno
+                                </Badge>
+                              )}
+                            </div>
+                            <div className="text-gray-700 text-sm leading-relaxed">
+                              {comment.content}
+                            </div>
                           </div>
-                          <div className="text-gray-700 text-sm leading-relaxed">
-                            {comment.content}
+                        </div>
+                      ))
+                    ) : (
+                      <div className="text-center py-8 text-gray-500">
+                        <MessageCircle className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                        <p className="text-sm">Nenhum comentário ainda.</p>
+                        <p className="text-xs">Seja o primeiro a comentar!</p>
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Add Comment Form - Fixed at bottom */}
+                  <div className="border-t border-gray-200 p-4 bg-white">
+                    <div className="space-y-3">
+                      <Textarea
+                        data-testid="textarea-comment"
+                        placeholder="Digite seu comentário..."
+                        value={newComment}
+                        onChange={(e) => setNewComment(e.target.value)}
+                        className="min-h-[60px] resize-none text-sm"
+                      />
+                      
+                      <div className="flex flex-col space-y-2">
+                        <div className="flex items-center space-x-2">
+                          <Switch
+                            checked={isInternal}
+                            onCheckedChange={setIsInternal}
+                          />
+                          <label className="text-xs text-gray-600">
+                            Comentário interno
+                          </label>
+                        </div>
+                        
+                        <Button
+                          data-testid="button-send-comment"
+                          onClick={handleAddComment}
+                          disabled={!newComment.trim() || addCommentMutation.isPending}
+                          className="w-full"
+                        >
+                          <Send className="w-4 h-4 mr-2" />
+                          {addCommentMutation.isPending ? "Enviando..." : "Enviar"}
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </TabsContent>
+
+                {/* Details Tab */}
+                <TabsContent value="details" className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50 m-0">
+                  {/* Status Actions */}
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm">Ações Rápidas</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <div>
+                        <label className="text-xs text-gray-600 block mb-1">Status</label>
+                        <Select value={ticket.status} onValueChange={handleStatusChange}>
+                          <SelectTrigger data-testid="select-status-mobile" className="text-sm">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="open">Aberto</SelectItem>
+                            <SelectItem value="in_progress">Em Andamento</SelectItem>
+                            <SelectItem value="resolved">Resolvido</SelectItem>
+                            <SelectItem value="closed">Fechado</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div>
+                        <label className="text-xs text-gray-600 block mb-1">Prioridade</label>
+                        <Select value={ticket.priority} onValueChange={handlePriorityChange}>
+                          <SelectTrigger data-testid="select-priority-mobile" className="text-sm">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="low">Baixa</SelectItem>
+                            <SelectItem value="medium">Média</SelectItem>
+                            <SelectItem value="high">Alta</SelectItem>
+                            <SelectItem value="critical">Crítica</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div>
+                        <label className="text-xs text-gray-600 block mb-1">Responsável</label>
+                        <Select 
+                          value={ticket.assigneeId || "unassigned"} 
+                          onValueChange={handleAssigneeChange}
+                        >
+                          <SelectTrigger data-testid="select-assignee-mobile" className="text-sm">
+                            <SelectValue placeholder="Não atribuído" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="unassigned">Não atribuído</SelectItem>
+                            {users.filter(u => u.role === "agent" || u.role === "admin").map((user) => (
+                              <SelectItem key={user.id} value={user.id}>
+                                {user.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* SLA Progress */}
+                  {ticket.slaDeadline && (
+                    <Card>
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-sm flex items-center">
+                          <Timer className="w-4 h-4 mr-2" />
+                          SLA
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-gray-600">Progresso</span>
+                            <span className={cn(
+                              "font-medium",
+                              hasOverdueSLA ? "text-red-600" : slaProgress > 80 ? "text-yellow-600" : "text-green-600"
+                            )}>
+                              {Math.round(slaProgress)}%
+                            </span>
+                          </div>
+                          <Progress 
+                            value={slaProgress} 
+                            className={cn(
+                              "h-2",
+                              hasOverdueSLA ? "bg-red-100" : slaProgress > 80 ? "bg-yellow-100" : "bg-green-100"
+                            )}
+                          />
+                          <div className="text-xs text-gray-500">
+                            Prazo: {formatDate(ticket.slaDeadline)}
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {/* Time Tracking */}
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm flex items-center">
+                        <Clock className="w-4 h-4 mr-2" />
+                        Tempo
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-primary">
+                          {calculateTimeSpent(ticket.createdAt, ticket.updatedAt)}
+                        </div>
+                        <div className="text-xs text-gray-500 mt-1">
+                          Calculado automaticamente
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Ticket Info */}
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm">Informações</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3 text-sm">
+                      <div className="flex items-center space-x-2">
+                        <UserIcon className="w-4 h-4 text-gray-400" />
+                        <div>
+                          <div className="text-gray-600">Solicitante:</div>
+                          <div className="font-medium">
+                            {ticket.requester?.name || `Usuário ${ticket.requesterId.slice(0, 8)}`}
                           </div>
                         </div>
                       </div>
-                    ))
-                  ) : (
-                    <div className="text-center py-8 text-gray-500">
-                      <MessageCircle className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-                      <p className="text-sm">Nenhum comentário ainda.</p>
-                      <p className="text-xs">Seja o primeiro a comentar!</p>
-                    </div>
-                  )}
-                </div>
-                
-                {/* Add Comment Form */}
-                <div className="border-t border-gray-200 p-4">
-                  <div className="space-y-3">
-                    <Textarea
-                      data-testid="textarea-comment"
-                      placeholder="Digite seu comentário..."
-                      value={newComment}
-                      onChange={(e) => setNewComment(e.target.value)}
-                      className="min-h-[60px] resize-none text-sm"
-                    />
-                    
-                    <div className="flex flex-col space-y-2">
+                      
                       <div className="flex items-center space-x-2">
-                        <Switch
-                          checked={isInternal}
-                          onCheckedChange={setIsInternal}
-                        />
-                        <label className="text-xs text-gray-600">
-                          Comentário interno
-                        </label>
+                        <Calendar className="w-4 h-4 text-gray-400" />
+                        <div>
+                          <div className="text-gray-600">Criado em:</div>
+                          <div className="font-medium">{formatDate(ticket.createdAt)}</div>
+                        </div>
                       </div>
                       
-                      <Button
-                        data-testid="button-send-comment"
-                        onClick={handleAddComment}
-                        disabled={!newComment.trim() || addCommentMutation.isPending}
-                        className="w-full"
-                      >
-                        <Send className="w-4 h-4 mr-2" />
-                        {addCommentMutation.isPending ? "Enviando..." : "Enviar"}
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              </div>
+                      {ticket.queue && (
+                        <div className="flex items-center space-x-2">
+                          <div 
+                            className="w-4 h-4 rounded-full"
+                            style={{ backgroundColor: ticket.queue.color }}
+                          />
+                          <div>
+                            <div className="text-gray-600">Fila:</div>
+                            <div className="font-medium">{ticket.queue.name}</div>
+                          </div>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+              </Tabs>
             </div>
           ) : (
             /* Desktop Layout - Original Structure */
