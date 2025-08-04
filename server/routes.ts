@@ -7,7 +7,7 @@ import {
   insertLabelSchema,
   insertTicketTypeSchema,
   insertWorkScheduleSchema,
-  insertInventoryItemSchema
+
 } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -249,23 +249,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // Inventory
-  app.get("/api/inventory", async (req, res) => {
+  // Clients
+  app.get("/api/clients", async (req, res) => {
     try {
-      const items = await storage.getInventoryItems();
-      res.json(items);
+      const clients = await storage.getClients();
+      res.json(clients);
     } catch (error) {
-      res.status(500).json({ error: "Failed to fetch inventory items" });
+      res.status(500).json({ error: "Failed to fetch clients" });
     }
   });
   
-  app.post("/api/inventory", async (req, res) => {
+  app.get("/api/clients/:clientId/tickets", async (req, res) => {
     try {
-      const validatedData = insertInventoryItemSchema.parse(req.body);
-      const item = await storage.createInventoryItem(validatedData);
-      res.status(201).json(item);
+      const tickets = await storage.getTicketsByClient(req.params.clientId);
+      res.json(tickets);
     } catch (error) {
-      res.status(400).json({ error: "Invalid inventory item data" });
+      res.status(500).json({ error: "Failed to fetch client tickets" });
     }
   });
 

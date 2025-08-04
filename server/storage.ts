@@ -63,12 +63,9 @@ export interface IStorage {
   createWorkSchedule(schedule: InsertWorkSchedule): Promise<WorkSchedule>;
   updateWorkSchedule(id: string, schedule: Partial<WorkSchedule>): Promise<WorkSchedule | undefined>;
   
-  // Inventory
-  getInventoryItems(): Promise<InventoryItem[]>;
-  getInventoryItem(id: string): Promise<InventoryItem | undefined>;
-  createInventoryItem(item: InsertInventoryItem): Promise<InventoryItem>;
-  updateInventoryItem(id: string, item: Partial<InventoryItem>): Promise<InventoryItem | undefined>;
-  deleteInventoryItem(id: string): Promise<boolean>;
+  // Clients  
+  getClients(): Promise<User[]>;
+  getTicketsByClient(clientId: string): Promise<Ticket[]>;
   
   // Dashboard stats
   getDashboardStats(): Promise<{
@@ -87,7 +84,7 @@ export class MemStorage implements IStorage {
   private tickets: Map<string, Ticket>;
   private ticketComments: Map<string, TicketComment>;
   private workSchedules: Map<string, WorkSchedule>;
-  private inventoryItems: Map<string, InventoryItem>;
+
   private ticketCounter: number;
 
   constructor() {
@@ -98,7 +95,7 @@ export class MemStorage implements IStorage {
     this.tickets = new Map();
     this.ticketComments = new Map();
     this.workSchedules = new Map();
-    this.inventoryItems = new Map();
+
     this.ticketCounter = 2847;
     
     this.initializeData();
@@ -673,46 +670,32 @@ export class MemStorage implements IStorage {
     return updated;
   }
   
-  async getInventoryItems(): Promise<InventoryItem[]> {
-    return Array.from(this.inventoryItems.values());
-  }
-  
-  async getInventoryItem(id: string): Promise<InventoryItem | undefined> {
-    return this.inventoryItems.get(id);
-  }
-  
-  async createInventoryItem(insertItem: InsertInventoryItem): Promise<InventoryItem> {
-    const id = randomUUID();
-    const item: InventoryItem = {
-      ...insertItem,
-      id,
-      status: insertItem.status || "available",
-      description: insertItem.description || null,
-      customFields: insertItem.customFields || null,
-      serialNumber: insertItem.serialNumber || null,
-      assignedToId: insertItem.assignedToId || null,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    };
-    this.inventoryItems.set(id, item);
-    return item;
-  }
-  
-  async updateInventoryItem(id: string, updates: Partial<InventoryItem>): Promise<InventoryItem | undefined> {
-    const item = this.inventoryItems.get(id);
-    if (!item) return undefined;
+  async getClients(): Promise<User[]> {
+    const allUsers = Array.from(this.users.values());
+    const allTickets = Array.from(this.tickets.values());
     
-    const updated = { 
-      ...item, 
-      ...updates, 
-      updatedAt: new Date()
-    };
-    this.inventoryItems.set(id, updated);
-    return updated;
+    // Calculate ticket statistics for each user
+    return allUsers.map(user => {
+      const userTickets = allTickets.filter(ticket => ticket.requesterId === user.id);
+      const openTickets = userTickets.filter(ticket => 
+        ticket.status === "open" || ticket.status === "in_progress"
+      ).length;
+      const lastTicket = userTickets
+        .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())[0];
+      
+      return {
+        ...user,
+        openTickets,
+        totalTickets: userTickets.length,
+        lastTicketDate: lastTicket ? lastTicket.createdAt.toISOString() : undefined
+      };
+    }).filter(user => user.totalTickets > 0); // Only show users with tickets
   }
   
-  async deleteInventoryItem(id: string): Promise<boolean> {
-    return this.inventoryItems.delete(id);
+  async getTicketsByClient(clientId: string): Promise<Ticket[]> {
+    return Array.from(this.tickets.values())
+      .filter(ticket => ticket.requesterId === clientId)
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
   }
   
   async getDashboardStats(): Promise<{

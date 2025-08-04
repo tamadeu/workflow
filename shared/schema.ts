@@ -88,18 +88,7 @@ export const workSchedules = pgTable("work_schedules", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
-export const inventoryItems = pgTable("inventory_items", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  name: text("name").notNull(),
-  description: text("description"),
-  category: text("category").notNull(),
-  serialNumber: text("serial_number"),
-  status: text("status").notNull().default("available"),
-  assignedToId: varchar("assigned_to_id").references(() => users.id),
-  customFields: jsonb("custom_fields"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
+
 
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).omit({
@@ -139,11 +128,7 @@ export const insertWorkScheduleSchema = createInsertSchema(workSchedules).omit({
   createdAt: true,
 });
 
-export const insertInventoryItemSchema = createInsertSchema(inventoryItems).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
+
 
 // Types
 export type User = typeof users.$inferSelect;
@@ -160,5 +145,4 @@ export type TicketComment = typeof ticketComments.$inferSelect;
 export type InsertTicketComment = z.infer<typeof insertTicketCommentSchema>;
 export type WorkSchedule = typeof workSchedules.$inferSelect;
 export type InsertWorkSchedule = z.infer<typeof insertWorkScheduleSchema>;
-export type InventoryItem = typeof inventoryItems.$inferSelect;
-export type InsertInventoryItem = z.infer<typeof insertInventoryItemSchema>;
+

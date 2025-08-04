@@ -13,7 +13,7 @@ import TicketTree from "@/pages/ticket-tree";
 import Queues from "@/pages/queues";
 import Labels from "@/pages/labels";
 import WorkSchedules from "@/pages/work-schedules";
-import Inventory from "@/pages/inventory";
+import Clients from "@/pages/clients";
 import Analytics from "@/pages/analytics";
 import SLAMonitor from "@/pages/sla-monitor";
 import Export from "@/pages/export";
@@ -34,7 +34,7 @@ function Router() {
           <Route path="/queues" component={Queues} />
           <Route path="/labels" component={Labels} />
           <Route path="/work-schedules" component={WorkSchedules} />
-          <Route path="/inventory" component={Inventory} />
+          <Route path="/clients" component={Clients} />
           <Route path="/analytics" component={Analytics} />
           <Route path="/sla" component={SLAMonitor} />
           <Route path="/export" component={Export} />

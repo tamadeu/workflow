@@ -26,10 +26,10 @@ const navigation = [
 ];
 
 const management = [
-  { name: "Filas de Atendimento", href: "/queues", icon: Users },
+  { name: "Filas de Atendimento", href: "/queues", icon: Settings },
   { name: "Rótulos", href: "/labels", icon: Tag },
   { name: "Jornadas", href: "/work-schedules", icon: Clock },
-  { name: "Inventário", href: "/inventory", icon: Package },
+  { name: "Clientes", href: "/clients", icon: Users },
 ];
 
 const reports = [
