@@ -89,7 +89,7 @@ export default function AdvancedFilter({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto sm:max-w-4xl w-[95vw] sm:w-auto">
         <DialogHeader>
           <DialogTitle>Filtro Avançado de Chamados</DialogTitle>
         </DialogHeader>

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
-import { Eye, Check, X, Filter, Download } from "lucide-react";
+import { Eye, Check, X, Filter, Download, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -15,6 +15,8 @@ import type { TicketFilters } from "@/lib/types";
 export default function TicketsTable() {
   const [filters, setFilters] = useState<TicketFilters>({});
   const [showAdvancedFilter, setShowAdvancedFilter] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(5);
   const isMobile = useIsMobile();
 
   const { data: tickets = [], isLoading } = useQuery<Ticket[]>({
@@ -100,6 +102,17 @@ export default function TicketsTable() {
     return Math.floor(Math.random() * 100);
   };
 
+  // Pagination logic
+  const totalItems = tickets.length;
+  const totalPages = Math.ceil(totalItems / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedTickets = tickets.slice(startIndex, endIndex);
+
+  const goToPage = (page: number) => {
+    setCurrentPage(Math.max(1, Math.min(page, totalPages)));
+  };
+
   if (isLoading) {
     return (
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
@@ -181,7 +194,7 @@ export default function TicketsTable() {
         {/* Mobile View */}
         {isMobile ? (
           <div className="p-4">
-            {tickets.map((ticket) => (
+            {paginatedTickets.map((ticket) => (
               <MobileTicketCard
                 key={ticket.id}
                 ticket={ticket}
@@ -209,7 +222,7 @@ export default function TicketsTable() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {tickets.map((ticket) => {
+              {paginatedTickets.map((ticket) => {
                 const slaProgress = getSLAProgress();
                 return (
                   <TableRow key={ticket.id} className="hover:bg-gray-50">
@@ -307,25 +320,44 @@ export default function TicketsTable() {
             /* Mobile Pagination - Compact */
             <div className="flex flex-col space-y-3">
               <div className="text-sm text-gray-500 text-center">
-                Mostrando 1-{tickets.length} de {tickets.length}
+                Mostrando {startIndex + 1}-{Math.min(endIndex, totalItems)} de {totalItems}
               </div>
               <div className="flex items-center justify-center space-x-2">
-                <Button variant="outline" size="sm" disabled className="text-xs px-3">
-                  ‹ Ant
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  disabled={currentPage === 1}
+                  onClick={() => goToPage(currentPage - 1)}
+                  className="text-xs px-3"
+                >
+                  <ChevronLeft className="w-3 h-3 mr-1" />
+                  Ant
                 </Button>
                 <div className="flex items-center space-x-1">
-                  <Button variant="default" size="sm" className="bg-primary text-xs w-8 h-8 p-0">
-                    1
-                  </Button>
-                  <Button variant="outline" size="sm" className="text-xs w-8 h-8 p-0">
-                    2
-                  </Button>
-                  <Button variant="outline" size="sm" className="text-xs w-8 h-8 p-0">
-                    3
-                  </Button>
+                  {Array.from({ length: Math.min(3, totalPages) }, (_, i) => {
+                    const pageNum = Math.max(1, Math.min(currentPage - 1 + i, totalPages));
+                    return (
+                      <Button 
+                        key={pageNum}
+                        variant={currentPage === pageNum ? "default" : "outline"} 
+                        size="sm" 
+                        onClick={() => goToPage(pageNum)}
+                        className={`text-xs w-8 h-8 p-0 ${currentPage === pageNum ? "bg-primary" : ""}`}
+                      >
+                        {pageNum}
+                      </Button>
+                    );
+                  })}
                 </div>
-                <Button variant="outline" size="sm" className="text-xs px-3">
-                  Prox ›
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  disabled={currentPage === totalPages}
+                  onClick={() => goToPage(currentPage + 1)}
+                  className="text-xs px-3"
+                >
+                  Prox
+                  <ChevronRight className="w-3 h-3 ml-1" />
                 </Button>
               </div>
             </div>
@@ -333,23 +365,40 @@ export default function TicketsTable() {
             /* Desktop Pagination */
             <div className="flex items-center justify-between">
               <div className="text-sm text-gray-500">
-                Mostrando 1-{tickets.length} de {tickets.length} chamados
+                Mostrando {startIndex + 1}-{Math.min(endIndex, totalItems)} de {totalItems} chamados
               </div>
               <div className="flex items-center space-x-2">
-                <Button variant="outline" size="sm" disabled>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  disabled={currentPage === 1}
+                  onClick={() => goToPage(currentPage - 1)}
+                >
+                  <ChevronLeft className="w-4 h-4 mr-1" />
                   Anterior
                 </Button>
-                <Button variant="default" size="sm" className="bg-primary">
-                  1
-                </Button>
-                <Button variant="outline" size="sm">
-                  2
-                </Button>
-                <Button variant="outline" size="sm">
-                  3
-                </Button>
-                <Button variant="outline" size="sm">
+                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                  const pageNum = Math.max(1, Math.min(currentPage - 2 + i, totalPages));
+                  return (
+                    <Button 
+                      key={pageNum}
+                      variant={currentPage === pageNum ? "default" : "outline"} 
+                      size="sm"
+                      onClick={() => goToPage(pageNum)}
+                      className={currentPage === pageNum ? "bg-primary" : ""}
+                    >
+                      {pageNum}
+                    </Button>
+                  );
+                })}
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  disabled={currentPage === totalPages}
+                  onClick={() => goToPage(currentPage + 1)}
+                >
                   Próximo
+                  <ChevronRight className="w-4 h-4 ml-1" />
                 </Button>
               </div>
             </div>
