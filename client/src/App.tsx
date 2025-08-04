@@ -18,15 +18,30 @@ import Analytics from "@/pages/analytics";
 import SLAMonitor from "@/pages/sla-monitor";
 import Export from "@/pages/export";
 import Sidebar from "@/components/layout/sidebar";
+import BottomMenu from "@/components/layout/bottom-menu";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useState } from "react";
 
 function Router() {
   const isMobile = useIsMobile();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  const handleMenuToggle = () => {
+    setSidebarOpen(!sidebarOpen);
+  };
+
+  const handleSidebarClose = () => {
+    setSidebarOpen(false);
+  };
 
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50">
-      <Sidebar isMobile={isMobile} />
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <Sidebar 
+        isMobile={isMobile} 
+        isOpen={sidebarOpen}
+        onClose={handleSidebarClose}
+      />
+      <div className={`flex-1 flex flex-col overflow-hidden ${isMobile ? 'pb-16' : ''}`}>
         <Switch>
           <Route path="/" component={Dashboard} />
           <Route path="/new-ticket" component={NewTicket} />
@@ -44,6 +59,11 @@ function Router() {
           <Route component={NotFound} />
         </Switch>
       </div>
+      
+      {/* Bottom Menu - Mobile Only */}
+      {isMobile && (
+        <BottomMenu onMenuToggle={handleMenuToggle} />
+      )}
     </div>
   );
 }

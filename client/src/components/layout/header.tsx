@@ -16,14 +16,14 @@ export default function Header({ title, subtitle, showNewTicketButton = true }: 
   return (
     <header className="bg-white shadow-sm border-b border-gray-200 px-4 lg:px-6 py-4">
       <div className="flex items-center justify-between">
-        <div className={isMobile ? "ml-12" : ""}>
+        <div>
           <h1 className="text-xl lg:text-2xl font-semibold text-gray-900">{title}</h1>
           {subtitle && (
             <p className="text-sm text-gray-500 mt-1">{subtitle}</p>
           )}
         </div>
         <div className="flex items-center space-x-2 lg:space-x-4">
-          {/* Search - Hidden on small mobile */}
+          {/* Search - Hidden on mobile */}
           {!isMobile && (
             <div className="relative">
               <Input
@@ -39,16 +39,14 @@ export default function Header({ title, subtitle, showNewTicketButton = true }: 
           {/* Notifications */}
           <NotificationsDropdown />
           
-          {/* New Ticket Button */}
-          {showNewTicketButton && (
+          {/* New Ticket Button - Hidden on mobile (using bottom menu instead) */}
+          {showNewTicketButton && !isMobile && (
             <Button 
               data-testid="button-new-ticket" 
               className="bg-primary hover:bg-primary-600"
-              size={isMobile ? "sm" : "default"}
             >
-              <Plus className="w-4 h-4 mr-1 lg:mr-2" />
-              <span className="hidden sm:inline">Novo Chamado</span>
-              <span className="sm:hidden">Novo</span>
+              <Plus className="w-4 h-4 mr-2" />
+              Novo Chamado
             </Button>
           )}
         </div>

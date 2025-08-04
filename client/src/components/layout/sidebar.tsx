@@ -44,29 +44,20 @@ const reports = [
 
 interface SidebarProps {
   isMobile?: boolean;
+  isOpen?: boolean;
+  onClose?: () => void;
 }
 
-export default function Sidebar({ isMobile }: SidebarProps) {
+export default function Sidebar({ isMobile, isOpen = false, onClose }: SidebarProps) {
   const [location] = useLocation();
-  const [isOpen, setIsOpen] = useState(false);
 
-  const toggleSidebar = () => setIsOpen(!isOpen);
-  const closeSidebar = () => setIsOpen(false);
+  const closeSidebar = () => {
+    if (onClose) onClose();
+  };
 
   if (isMobile) {
     return (
       <>
-        {/* Mobile Menu Button */}
-        <Button
-          variant="outline"
-          size="icon"
-          className="fixed top-4 left-4 z-50 lg:hidden bg-white shadow-md"
-          onClick={toggleSidebar}
-          data-testid="mobile-menu-button"
-        >
-          <Menu className="h-4 w-4" />
-        </Button>
-
         {/* Mobile Overlay */}
         {isOpen && (
           <div
