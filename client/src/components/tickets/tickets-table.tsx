@@ -15,7 +15,7 @@ export default function TicketsTable() {
   const [showAdvancedFilter, setShowAdvancedFilter] = useState(false);
 
   const { data: tickets = [], isLoading } = useQuery<Ticket[]>({
-    queryKey: ["/api/tickets", filters],
+    queryKey: ["/api/tickets"],
   });
 
   const { data: queues = [] } = useQuery<Queue[]>({
