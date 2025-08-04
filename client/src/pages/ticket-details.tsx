@@ -356,11 +356,11 @@ export default function TicketDetails() {
           )}>
             {/* Ticket Details & Comments */}
             <div className={cn(
-              "flex flex-col overflow-hidden p-4 sm:p-6",
-              isMobile ? "flex-1" : "flex-1"
+              "flex flex-col overflow-hidden",
+              isMobile ? "flex-1 p-4" : "flex-1 p-6"
             )}>
               {/* Ticket Title & Description */}
-              <Card className="mb-4 sm:mb-6">
+              <Card className="mb-4 sm:mb-6 flex-shrink-0">
                 <CardHeader className="pb-3 sm:pb-6">
                   <CardTitle 
                     data-testid="ticket-title" 
@@ -398,13 +398,16 @@ export default function TicketDetails() {
               </Card>
 
               {/* Comments Section */}
-              <Card className="flex-1 flex flex-col overflow-hidden">
+              <Card className={cn(
+                "flex flex-col overflow-hidden",
+                isMobile ? "flex-1 min-h-0" : "flex-1"
+              )}>
                 <CardHeader className="flex-shrink-0 pb-3 sm:pb-6">
                   <div className="flex items-center justify-between">
                     <CardTitle className="flex items-center space-x-2">
                       <MessageCircle className="w-4 h-4 sm:w-5 sm:h-5" />
                       <span className="text-sm sm:text-base">
-                        {isMobile ? `(${filteredComments.length})` : `Conversação (${filteredComments.length})`}
+                        {isMobile ? `Conversação (${filteredComments.length})` : `Conversação (${filteredComments.length})`}
                       </span>
                     </CardTitle>
                     <div className="flex items-center space-x-2 sm:space-x-3">
@@ -423,98 +426,112 @@ export default function TicketDetails() {
                   </div>
                 </CardHeader>
               
-                {/* Comments List */}
-                <div className="flex-1 overflow-y-auto p-3 sm:p-6 space-y-3 sm:space-y-4">
-                {filteredComments.map((comment) => (
-                  <div
-                    key={comment.id}
-                    className={cn(
-                      "flex space-x-3 p-4 rounded-lg border",
-                      comment.isInternal 
-                        ? "bg-yellow-50 border-yellow-200" 
-                        : "bg-white border-gray-200"
-                    )}
-                  >
-                    <Avatar className="flex-shrink-0">
-                      <AvatarFallback className="text-sm">
-                        {getInitials(comment.author?.name)}
-                      </AvatarFallback>
-                    </Avatar>
+                {/* Comments List - Scrollable Area */}
+                <div className={cn(
+                  "flex-1 overflow-y-auto space-y-3 sm:space-y-4",
+                  isMobile ? "p-3 min-h-[200px]" : "p-6"
+                )}>
+                  {filteredComments.map((comment) => (
+                    <div
+                      key={comment.id}
+                      className={cn(
+                        "flex space-x-3 p-3 sm:p-4 rounded-lg border",
+                        comment.isInternal 
+                          ? "bg-yellow-50 border-yellow-200" 
+                          : "bg-white border-gray-200"
+                      )}
+                    >
+                      <Avatar className="flex-shrink-0">
+                        <AvatarFallback className="text-sm">
+                          {getInitials(comment.author?.name)}
+                        </AvatarFallback>
+                      </Avatar>
+                      
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center space-x-2 mb-2">
+                          <span className="font-medium text-gray-900 text-sm sm:text-base">
+                            {comment.author?.name || "Usuário"}
+                          </span>
+                          <span className="text-xs sm:text-sm text-gray-500">
+                            {getTimeAgo(comment.createdAt)}
+                          </span>
+                          {comment.isInternal && (
+                            <Badge variant="outline" className="text-xs">
+                              Interno
+                            </Badge>
+                          )}
+                        </div>
+                        <div className="text-gray-700 whitespace-pre-wrap leading-relaxed text-sm sm:text-base">
+                          {comment.content}
+                        </div>
+                        <div className="flex items-center justify-between mt-2 sm:mt-3 text-xs text-gray-500">
+                          <span>{formatDate(comment.createdAt)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  
+                  {filteredComments.length === 0 && (
+                    <div className="text-center py-8 text-gray-500">
+                      <MessageCircle className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                      <p className="text-sm sm:text-base">Nenhum comentário ainda.</p>
+                      <p className="text-xs sm:text-sm">Seja o primeiro a comentar!</p>
+                    </div>
+                  )}
+                </div>
+              
+                {/* Add Comment */}
+                <div className="flex-shrink-0 border-t border-gray-200 p-3 sm:p-4">
+                  <div className="space-y-3">
+                    <Textarea
+                      data-testid="textarea-comment"
+                      placeholder="Digite seu comentário..."
+                      value={newComment}
+                      onChange={(e) => setNewComment(e.target.value)}
+                      className="min-h-[60px] sm:min-h-[80px] resize-none text-sm sm:text-base"
+                    />
                     
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center space-x-2 mb-2">
-                        <span className="font-medium text-gray-900">
-                          {comment.author?.name || "Usuário"}
-                        </span>
-                        <span className="text-sm text-gray-500">
-                          {getTimeAgo(comment.createdAt)}
-                        </span>
-                        {comment.isInternal && (
-                          <Badge variant="outline" className="text-xs">
-                            Interno
-                          </Badge>
+                    <div className={cn(
+                      "flex items-center",
+                      isMobile ? "flex-col space-y-2" : "justify-between"
+                    )}>
+                      <div className={cn(
+                        "flex items-center space-x-2 sm:space-x-4",
+                        isMobile && "w-full justify-start"
+                      )}>
+                        <div className="flex items-center space-x-2">
+                          <Switch
+                            checked={isInternal}
+                            onCheckedChange={setIsInternal}
+                          />
+                          <label className="text-xs sm:text-sm text-gray-600">
+                            Comentário interno
+                          </label>
+                        </div>
+                        
+                        {!isMobile && (
+                          <Button variant="ghost" size="sm">
+                            <Paperclip className="w-4 h-4 mr-2" />
+                            Anexar
+                          </Button>
                         )}
                       </div>
-                      <div className="text-gray-700 whitespace-pre-wrap leading-relaxed">
-                        {comment.content}
-                      </div>
-                      <div className="flex items-center justify-between mt-3 text-xs text-gray-500">
-                        <span>{formatDate(comment.createdAt)}</span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-                
-                {filteredComments.length === 0 && (
-                  <div className="text-center py-8 text-gray-500">
-                    <MessageCircle className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-                    <p>Nenhum comentário ainda.</p>
-                    <p className="text-sm">Seja o primeiro a comentar!</p>
-                  </div>
-                )}
-              </div>
-              
-              {/* Add Comment */}
-              <div className="flex-shrink-0 border-t border-gray-200 p-4">
-                <div className="space-y-3">
-                  <Textarea
-                    data-testid="textarea-comment"
-                    placeholder="Digite seu comentário..."
-                    value={newComment}
-                    onChange={(e) => setNewComment(e.target.value)}
-                    className="min-h-[80px] resize-none"
-                  />
-                  
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-4">
-                      <div className="flex items-center space-x-2">
-                        <Switch
-                          checked={isInternal}
-                          onCheckedChange={setIsInternal}
-                        />
-                        <label className="text-sm text-gray-600">
-                          Comentário interno
-                        </label>
-                      </div>
                       
-                      <Button variant="ghost" size="sm">
-                        <Paperclip className="w-4 h-4 mr-2" />
-                        Anexar
+                      <Button
+                        data-testid="button-send-comment"
+                        onClick={handleAddComment}
+                        disabled={!newComment.trim() || addCommentMutation.isPending}
+                        className={cn(
+                          isMobile && "w-full"
+                        )}
+                      >
+                        <Send className="w-4 h-4 mr-2" />
+                        {addCommentMutation.isPending ? "Enviando..." : "Enviar"}
                       </Button>
                     </div>
-                    
-                    <Button
-                      data-testid="button-send-comment"
-                      onClick={handleAddComment}
-                      disabled={!newComment.trim() || addCommentMutation.isPending}
-                    >
-                      <Send className="w-4 h-4 mr-2" />
-                      {addCommentMutation.isPending ? "Enviando..." : "Enviar"}
-                    </Button>
                   </div>
                 </div>
-              </div>
-            </Card>
+              </Card>
             </div>
 
             {/* Sidebar - Mobile: Bottom sheet style, Desktop: Right sidebar */}
