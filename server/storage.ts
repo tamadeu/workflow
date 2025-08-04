@@ -255,7 +255,6 @@ export class MemStorage implements IStorage {
         labels: [allLabels.find(l => l.name === "urgente")?.id, allLabels.find(l => l.name === "software")?.id],
         createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000), // 5 dias atrás
         resolvedAt: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000), // 4 dias atrás
-        timeSpent: 180, // 3 horas
       },
       {
         title: "Redefinição de senha - Sistema financeiro",
@@ -281,7 +280,6 @@ export class MemStorage implements IStorage {
         labels: [allLabels.find(l => l.name === "software")?.id, allLabels.find(l => l.name === "rotina")?.id],
         createdAt: new Date(Date.now() - 6 * 60 * 60 * 1000), // 6 horas atrás
         slaDeadline: new Date(Date.now() + 18 * 60 * 60 * 1000), // 18 horas
-        timeSpent: 45,
       }
     ];
     
@@ -302,7 +300,7 @@ export class MemStorage implements IStorage {
         customFields: null,
         labels: ticketData.labels ? ticketData.labels.filter(Boolean) : null,
         slaDeadline: ticketData.slaDeadline || null,
-        timeSpent: ticketData.timeSpent || 0,
+        timeSpent: 0,
         isPaused: false,
         pauseReason: null,
         createdAt: ticketData.createdAt,

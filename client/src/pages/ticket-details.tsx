@@ -50,7 +50,7 @@ export default function TicketDetails() {
   const [newComment, setNewComment] = useState("");
   const [isInternal, setIsInternal] = useState(false);
   const [showInternalComments, setShowInternalComments] = useState(true);
-  const [timeSpent, setTimeSpent] = useState("");
+
   const { toast } = useToast();
 
   // Queries
@@ -108,24 +108,7 @@ export default function TicketDetails() {
     },
   });
 
-  const logTimeMutation = useMutation({
-    mutationFn: async (minutes: number) => {
-      const response = await fetch(`/api/tickets/${ticketId}/time`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ minutes }),
-      });
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/tickets", ticketId] });
-      setTimeSpent("");
-      toast({
-        title: "Sucesso",
-        description: "Tempo registrado com sucesso!",
-      });
-    },
-  });
+
 
   if (isLoading || !ticket) {
     return (
@@ -163,19 +146,7 @@ export default function TicketDetails() {
     });
   };
 
-  const handleLogTime = () => {
-    const minutes = parseInt(timeSpent);
-    if (isNaN(minutes) || minutes <= 0) {
-      toast({
-        title: "Erro",
-        description: "Digite um tempo válido em minutos.",
-        variant: "destructive",
-      });
-      return;
-    }
 
-    logTimeMutation.mutate(minutes);
-  };
 
   const filteredComments = showInternalComments 
     ? comments 
@@ -274,6 +245,27 @@ export default function TicketDetails() {
     if (diffMins < 60) return `${diffMins}min atrás`;
     if (diffHours < 24) return `${diffHours}h atrás`;
     return `${diffDays}d atrás`;
+  };
+
+  const calculateTimeSpent = (createdAt: string, updatedAt: string) => {
+    const created = new Date(createdAt);
+    const updated = new Date(updatedAt);
+    const diffInMs = updated.getTime() - created.getTime();
+    const diffInMinutes = Math.floor(diffInMs / (1000 * 60));
+    
+    if (diffInMinutes < 1) return "< 1 min";
+    if (diffInMinutes < 60) return `${diffInMinutes} min`;
+    
+    const hours = Math.floor(diffInMinutes / 60);
+    const remainingMinutes = diffInMinutes % 60;
+    
+    if (hours < 24) {
+      return remainingMinutes > 0 ? `${hours}h ${remainingMinutes}m` : `${hours}h`;
+    }
+    
+    const days = Math.floor(hours / 24);
+    const remainingHours = hours % 24;
+    return remainingHours > 0 ? `${days}d ${remainingHours}h` : `${days}d`;
   };
 
   return (
@@ -590,35 +582,18 @@ export default function TicketDetails() {
               </Card>
             )}
 
-            {/* Time Tracking */}
+            {/* Time Tracking - Automatic Calculation */}
             <Card>
               <CardHeader>
                 <CardTitle className="text-sm">Tempo</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Tempo gasto:</span>
-                  <span className="font-medium">{formatTimeSpent(ticket.timeSpent)}</span>
+                  <span className="text-sm text-gray-600">Tempo decorrido:</span>
+                  <span className="font-medium">{calculateTimeSpent(ticket.createdAt, ticket.updatedAt)}</span>
                 </div>
-                
-                <Separator />
-                
-                <div className="flex space-x-2">
-                  <input
-                    type="number"
-                    placeholder="Minutos"
-                    value={timeSpent}
-                    onChange={(e) => setTimeSpent(e.target.value)}
-                    className="flex-1 px-3 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-primary"
-                  />
-                  <Button
-                    size="sm"
-                    onClick={handleLogTime}
-                    disabled={logTimeMutation.isPending}
-                  >
-                    <Timer className="w-3 h-3 mr-1" />
-                    Log
-                  </Button>
+                <div className="text-xs text-gray-500">
+                  Calculado automaticamente entre criação e última atualização
                 </div>
               </CardContent>
             </Card>

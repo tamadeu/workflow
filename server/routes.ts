@@ -109,25 +109,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Time logging
-  app.post("/api/tickets/:id/time", async (req, res) => {
-    try {
-      const ticket = await storage.getTicket(req.params.id);
-      if (!ticket) {
-        return res.status(404).json({ error: "Ticket not found" });
-      }
-      
-      const currentTime = ticket.timeSpent || 0;
-      const updatedTicket = await storage.updateTicket(req.params.id, {
-        timeSpent: currentTime + req.body.minutes
-      });
-      
-      res.json(updatedTicket);
-    } catch (error) {
-      res.status(500).json({ error: "Failed to log time" });
-    }
-  });
-
   app.delete("/api/tickets/:id", async (req, res) => {
     try {
       const success = await storage.deleteTicket(req.params.id);
