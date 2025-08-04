@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "wouter";
 import { Eye, Check, X, Filter, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -214,14 +215,16 @@ export default function TicketsTable() {
                     </TableCell>
                     <TableCell>
                       <div className="flex space-x-2">
-                        <Button
-                          data-testid={`button-view-${ticket.number}`}
-                          variant="ghost"
-                          size="sm"
-                          className="text-primary hover:text-primary-700"
-                        >
-                          <Eye className="w-4 h-4" />
-                        </Button>
+                        <Link href={`/ticket/${ticket.id}`}>
+                          <Button
+                            data-testid={`button-view-${ticket.number}`}
+                            variant="ghost"
+                            size="sm"
+                            className="text-primary hover:text-primary-700"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </Button>
+                        </Link>
                         <Button
                           data-testid={`button-approve-${ticket.number}`}
                           variant="ghost"

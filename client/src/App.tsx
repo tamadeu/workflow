@@ -7,6 +7,7 @@ import NotFound from "@/pages/not-found";
 import Dashboard from "@/pages/dashboard";
 import NewTicket from "@/pages/new-ticket";
 import MyTickets from "@/pages/my-tickets";
+import TicketDetails from "@/pages/ticket-details";
 import Calendar from "@/pages/calendar";
 import TicketTree from "@/pages/ticket-tree";
 import Queues from "@/pages/queues";
@@ -27,6 +28,7 @@ function Router() {
           <Route path="/" component={Dashboard} />
           <Route path="/new-ticket" component={NewTicket} />
           <Route path="/my-tickets" component={MyTickets} />
+          <Route path="/ticket/:ticketId" component={TicketDetails} />
           <Route path="/calendar" component={Calendar} />
           <Route path="/ticket-tree" component={TicketTree} />
           <Route path="/queues" component={Queues} />

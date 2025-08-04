@@ -20,6 +20,7 @@ import { randomUUID } from "crypto";
 
 export interface IStorage {
   // Users
+  getUsers(): Promise<User[]>;
   getUser(id: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
@@ -105,8 +106,9 @@ export class MemStorage implements IStorage {
   
   private initializeData() {
     // Create default user
+    const adminUserId = "admin-user-id";
     const defaultUser: User = {
-      id: randomUUID(),
+      id: adminUserId,
       username: "admin",
       email: "admin@empresa.com",
       password: "admin123",
@@ -178,6 +180,241 @@ export class MemStorage implements IStorage {
       };
       this.ticketTypes.set(type.id, type);
     });
+    
+    // Create additional users for testing
+    const users = [
+      { username: "ana.costa", email: "ana.costa@empresa.com", name: "Ana Costa", role: "agent" },
+      { username: "carlos.santos", email: "carlos.santos@empresa.com", name: "Carlos Santos", role: "user" },
+      { username: "maria.silva", email: "maria.silva@empresa.com", name: "Maria Silva", role: "user" },
+      { username: "pedro.oliveira", email: "pedro.oliveira@empresa.com", name: "Pedro Oliveira", role: "agent" },
+    ];
+    
+    users.forEach(u => {
+      const user: User = {
+        id: randomUUID(),
+        username: u.username,
+        email: u.email,
+        password: "123456",
+        name: u.name,
+        role: u.role,
+        avatar: null,
+        createdAt: new Date(),
+      };
+      this.users.set(user.id, user);
+    });
+    
+    // Create sample tickets with realistic data
+    this.createSampleTickets();
+  }
+  
+  private createSampleTickets() {
+    const allUsers = Array.from(this.users.values());
+    const allQueues = Array.from(this.queues.values());
+    const allTypes = Array.from(this.ticketTypes.values());
+    const allLabels = Array.from(this.labels.values());
+    
+    const adminUser = allUsers.find(u => u.role === "admin");
+    const agentUsers = allUsers.filter(u => u.role === "agent");
+    const regularUsers = allUsers.filter(u => u.role === "user");
+    
+    const sampleTickets = [
+      {
+        title: "Problema de conectividade VPN - Home Office",
+        description: "Não consigo me conectar à VPN da empresa. O erro aparece logo após inserir as credenciais. Preciso acessar urgentemente os arquivos do servidor para finalizar o projeto.",
+        status: "in_progress",
+        priority: "high",
+        queueId: allQueues[0]?.id, // TI - Infraestrutura
+        typeId: allTypes[0]?.id, // Incidente
+        requesterId: regularUsers[0]?.id,
+        assigneeId: agentUsers[0]?.id,
+        labels: [allLabels.find(l => l.name === "urgente")?.id, allLabels.find(l => l.name === "rede")?.id],
+        createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000), // 2 dias atrás
+        slaDeadline: new Date(Date.now() + 4 * 60 * 60 * 1000), // 4 horas
+      },
+      {
+        title: "Solicitação de novo notebook para desenvolvedor",
+        description: "Preciso de um novo notebook com as seguintes especificações mínimas: 16GB RAM, SSD 512GB, processador i7. O atual está apresentando lentidão e travamentos frequentes.",
+        status: "open",
+        priority: "medium",
+        queueId: allQueues[0]?.id,
+        typeId: allTypes[1]?.id, // Solicitação
+        requesterId: regularUsers[1]?.id,
+        labels: [allLabels.find(l => l.name === "hardware")?.id],
+        createdAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000), // 1 dia atrás
+        slaDeadline: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000), // 2 dias
+      },
+      {
+        title: "Sistema de email fora do ar",
+        description: "O sistema de email corporativo está apresentando instabilidade. Mensagens não estão sendo enviadas nem recebidas. Isso está impactando toda a equipe comercial.",
+        status: "resolved",
+        priority: "critical",
+        queueId: allQueues[0]?.id,
+        typeId: allTypes[0]?.id,
+        requesterId: adminUser?.id,
+        assigneeId: agentUsers[1]?.id,
+        labels: [allLabels.find(l => l.name === "urgente")?.id, allLabels.find(l => l.name === "software")?.id],
+        createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000), // 5 dias atrás
+        resolvedAt: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000), // 4 dias atrás
+        timeSpent: 180, // 3 horas
+      },
+      {
+        title: "Redefinição de senha - Sistema financeiro",
+        description: "Não consigo acessar o sistema financeiro após a última atualização. Minha senha não está sendo aceita.",
+        status: "open",
+        priority: "medium",
+        queueId: allQueues[4]?.id, // Financeiro
+        typeId: allTypes[1]?.id,
+        requesterId: regularUsers[0]?.id,
+        labels: [allLabels.find(l => l.name === "acesso")?.id],
+        createdAt: new Date(Date.now() - 3 * 60 * 60 * 1000), // 3 horas atrás
+        slaDeadline: new Date(Date.now() + 5 * 60 * 60 * 1000), // 5 horas
+      },
+      {
+        title: "Instalação de software AutoCAD",
+        description: "Solicitação de instalação do AutoCAD 2024 na máquina da equipe de engenharia. Licença já foi adquirida pelo departamento.",
+        status: "in_progress",
+        priority: "low",
+        queueId: allQueues[1]?.id, // TI - Suporte
+        typeId: allTypes[1]?.id,
+        requesterId: regularUsers[1]?.id,
+        assigneeId: agentUsers[0]?.id,
+        labels: [allLabels.find(l => l.name === "software")?.id, allLabels.find(l => l.name === "rotina")?.id],
+        createdAt: new Date(Date.now() - 6 * 60 * 60 * 1000), // 6 horas atrás
+        slaDeadline: new Date(Date.now() + 18 * 60 * 60 * 1000), // 18 horas
+        timeSpent: 45,
+      }
+    ];
+    
+    sampleTickets.forEach((ticketData, index) => {
+      const ticketId = randomUUID();
+      const ticket: Ticket = {
+        id: ticketId,
+        number: ++this.ticketCounter,
+        title: ticketData.title,
+        description: ticketData.description,
+        status: ticketData.status,
+        priority: ticketData.priority,
+        typeId: ticketData.typeId || null,
+        queueId: ticketData.queueId || null,
+        requesterId: ticketData.requesterId || adminUser?.id || "",
+        assigneeId: ticketData.assigneeId || null,
+        parentId: null,
+        customFields: null,
+        labels: ticketData.labels ? ticketData.labels.filter(Boolean) : null,
+        slaDeadline: ticketData.slaDeadline || null,
+        timeSpent: ticketData.timeSpent || 0,
+        isPaused: false,
+        pauseReason: null,
+        createdAt: ticketData.createdAt,
+        updatedAt: ticketData.createdAt,
+        resolvedAt: ticketData.resolvedAt || null,
+        closedAt: null,
+      };
+      
+      this.tickets.set(ticketId, ticket);
+      
+      // Create comments for each ticket
+      this.createTicketComments(ticketId, ticketData, allUsers);
+    });
+  }
+  
+  private createTicketComments(ticketId: string, ticketData: any, users: User[]) {
+    const requester = users.find(u => u.id === ticketData.requesterId);
+    const assignee = users.find(u => u.id === ticketData.assigneeId);
+    const admin = users.find(u => u.role === "admin");
+    
+    // Comment from requester (initial)
+    const initialComment: TicketComment = {
+      id: randomUUID(),
+      ticketId,
+      authorId: requester?.id || admin?.id || "",
+      content: "Chamado criado. Aguardando análise da equipe técnica.",
+      isInternal: false,
+      createdAt: ticketData.createdAt,
+    };
+    this.ticketComments.set(initialComment.id, initialComment);
+    
+    // Response from agent (if assigned)
+    if (assignee && ticketData.status !== "open") {
+      const agentResponse: TicketComment = {
+        id: randomUUID(),
+        ticketId,
+        authorId: assignee.id,
+        content: `Chamado atribuído para mim. Analisando o problema reportado. ${
+          ticketData.priority === "critical" ? "Iniciando investigação imediata devido à criticidade." : 
+          ticketData.priority === "high" ? "Priorizando este chamado devido à alta prioridade." :
+          "Investigação iniciada conforme procedimento padrão."
+        }`,
+        isInternal: false,
+        createdAt: new Date(ticketData.createdAt.getTime() + 30 * 60 * 1000), // 30 min depois
+      };
+      this.ticketComments.set(agentResponse.id, agentResponse);
+      
+      // Internal note from agent
+      const internalNote: TicketComment = {
+        id: randomUUID(),
+        ticketId,
+        authorId: assignee.id,
+        content: `Nota interna: ${
+          ticketData.title.includes("VPN") ? "Verificando logs do servidor VPN. Possível problema de certificado." :
+          ticketData.title.includes("notebook") ? "Consultando catálogo de equipamentos aprovados. Verificando orçamento disponível." :
+          ticketData.title.includes("email") ? "Problema identificado no servidor de email. Aplicando correção." :
+          ticketData.title.includes("senha") ? "Verificando políticas de segurança antes de redefinir credenciais." :
+          "Analisando requisitos técnicos e dependências."
+        }`,
+        isInternal: true,
+        createdAt: new Date(ticketData.createdAt.getTime() + 45 * 60 * 1000), // 45 min depois
+      };
+      this.ticketComments.set(internalNote.id, internalNote);
+      
+      // Progress update
+      if (ticketData.status === "in_progress") {
+        const progressUpdate: TicketComment = {
+          id: randomUUID(),
+          ticketId,
+          authorId: assignee.id,
+          content: `Atualização: ${
+            ticketData.title.includes("VPN") ? "Identificamos que o certificado do servidor VPN expirou. Renovando o certificado e testando a conectividade." :
+            ticketData.title.includes("AutoCAD") ? "Software baixado. Iniciando processo de instalação. Tempo estimado: 1 hora." :
+            "Progresso da análise em andamento. Mais detalhes em breve."
+          }`,
+          isInternal: false,
+          createdAt: new Date(ticketData.createdAt.getTime() + 2 * 60 * 60 * 1000), // 2 horas depois
+        };
+        this.ticketComments.set(progressUpdate.id, progressUpdate);
+      }
+      
+      // Resolution comment for resolved tickets
+      if (ticketData.status === "resolved") {
+        const resolutionComment: TicketComment = {
+          id: randomUUID(),
+          ticketId,
+          authorId: assignee.id,
+          content: `✅ Chamado resolvido! ${
+            ticketData.title.includes("email") ? "Problema no servidor de email foi corrigido. Aplicamos patch de segurança e reiniciamos os serviços. Sistema funcionando normalmente." :
+            "Solução aplicada com sucesso."
+          }\n\nPor favor, teste e confirme se o problema foi solucionado. Caso persista, reabra o chamado.`,
+          isInternal: false,
+          createdAt: ticketData.resolvedAt || new Date(ticketData.createdAt.getTime() + 4 * 60 * 60 * 1000),
+        };
+        this.ticketComments.set(resolutionComment.id, resolutionComment);
+        
+        // User confirmation
+        const userConfirmation: TicketComment = {
+          id: randomUUID(),
+          ticketId,
+          authorId: requester?.id || admin?.id || "",
+          content: "Confirmado! O problema foi resolvido. Muito obrigado pela agilidade e eficiência da equipe! 👍",
+          isInternal: false,
+          createdAt: new Date((ticketData.resolvedAt || ticketData.createdAt).getTime() + 30 * 60 * 1000),
+        };
+        this.ticketComments.set(userConfirmation.id, userConfirmation);
+      }
+    }
+  }
+
+  async getUsers(): Promise<User[]> {
+    return Array.from(this.users.values());
   }
 
   async getUser(id: string): Promise<User | undefined> {
@@ -319,8 +556,27 @@ export class MemStorage implements IStorage {
     return tickets.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
   }
   
-  async getTicket(id: string): Promise<Ticket | undefined> {
-    return this.tickets.get(id);
+  async getTicket(id: string): Promise<any> {
+    const ticket = this.tickets.get(id);
+    if (!ticket) return undefined;
+
+    // Get related data
+    const requester = await this.getUser(ticket.requesterId);
+    const assignee = ticket.assigneeId ? await this.getUser(ticket.assigneeId) : undefined;
+    const queue = ticket.queueId ? await this.getQueue(ticket.queueId) : undefined;
+    
+    // Get labels - ticket.labels contains label IDs
+    const labels = ticket.labels ? 
+      (await Promise.all(ticket.labels.map(labelId => this.getLabel(labelId)))).filter(Boolean) : 
+      [];
+
+    return {
+      ...ticket,
+      requester,
+      assignee,
+      queue,
+      labels
+    };
   }
   
   async createTicket(insertTicket: InsertTicket): Promise<Ticket> {
@@ -381,7 +637,7 @@ export class MemStorage implements IStorage {
     const comment: TicketComment = {
       ...insertComment,
       id,
-      isInternal: insertComment.isInternal || null,
+      isInternal: insertComment.isInternal || false,
       createdAt: new Date()
     };
     this.ticketComments.set(id, comment);

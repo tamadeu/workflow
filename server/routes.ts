@@ -12,6 +12,16 @@ import {
 
 export async function registerRoutes(app: Express): Promise<Server> {
   
+  // Users
+  app.get("/api/users", async (req, res) => {
+    try {
+      const users = await storage.getUsers();
+      res.json(users);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch users" });
+    }
+  });
+  
   // Dashboard stats
   app.get("/api/dashboard/stats", async (req, res) => {
     try {
@@ -67,6 +77,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Ticket comments
+  app.get("/api/tickets/:id/comments", async (req, res) => {
+    try {
+      const comments = await storage.getTicketComments(req.params.id);
+      const commentsWithAuthors = await Promise.all(
+        comments.map(async (comment) => {
+          const author = await storage.getUser(comment.authorId);
+          return { ...comment, author };
+        })
+      );
+      res.json(commentsWithAuthors);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch comments" });
+    }
+  });
+
+  app.post("/api/tickets/:id/comments", async (req, res) => {
+    try {
+      const commentData = {
+        ticketId: req.params.id,
+        authorId: "admin-user-id", // In a real app, get from auth
+        content: req.body.content,
+        isInternal: req.body.isInternal || false,
+      };
+      const comment = await storage.createTicketComment(commentData);
+      const author = await storage.getUser(comment.authorId);
+      res.status(201).json({ ...comment, author });
+    } catch (error) {
+      res.status(400).json({ error: "Invalid comment data" });
+    }
+  });
+
+  // Time logging
+  app.post("/api/tickets/:id/time", async (req, res) => {
+    try {
+      const ticket = await storage.getTicket(req.params.id);
+      if (!ticket) {
+        return res.status(404).json({ error: "Ticket not found" });
+      }
+      
+      const currentTime = ticket.timeSpent || 0;
+      const updatedTicket = await storage.updateTicket(req.params.id, {
+        timeSpent: currentTime + req.body.minutes
+      });
+      
+      res.json(updatedTicket);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to log time" });
+    }
+  });
+
   app.delete("/api/tickets/:id", async (req, res) => {
     try {
       const success = await storage.deleteTicket(req.params.id);
