@@ -70,19 +70,19 @@ export function Combobox({
           data-testid={testId}
         >
           {selectedOption ? (
-            <div className="flex flex-col items-start">
+            <div className="flex flex-col items-start text-left">
               <span className="font-medium">{selectedOption.label}</span>
               {selectedOption.email && (
                 <span className="text-xs text-muted-foreground">{selectedOption.email}</span>
               )}
             </div>
           ) : (
-            placeholder
+            <span className="text-muted-foreground">{placeholder}</span>
           )}
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-full p-0" align="start">
+      <PopoverContent className="w-[400px] p-0" align="start">
         <Command>
           <CommandInput
             placeholder={searchPlaceholder}
@@ -95,9 +95,8 @@ export function Combobox({
               <CommandItem
                 key={option.value}
                 value={option.value}
-                onSelect={(currentValue) => {
-                  const newValue = currentValue === value ? "" : currentValue;
-                  onValueChange?.(newValue);
+                onSelect={() => {
+                  onValueChange?.(option.value);
                   setOpen(false);
                   setSearchValue("");
                 }}
