@@ -14,6 +14,7 @@ import Queues from "@/pages/queues";
 import Labels from "@/pages/labels";
 import WorkSchedules from "@/pages/work-schedules";
 import Clients from "@/pages/clients";
+import ClientForm from "@/pages/client-form";
 import Analytics from "@/pages/analytics";
 import SLAMonitor from "@/pages/sla-monitor";
 import Export from "@/pages/export";
@@ -53,6 +54,7 @@ function Router() {
           <Route path="/labels" component={Labels} />
           <Route path="/work-schedules" component={WorkSchedules} />
           <Route path="/clients" component={Clients} />
+          <Route path="/clients/:action/:id?" component={ClientForm} />
           <Route path="/analytics" component={Analytics} />
           <Route path="/sla" component={SLAMonitor} />
           <Route path="/export" component={Export} />

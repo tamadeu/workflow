@@ -129,7 +129,15 @@ export default function Clients() {
               {/* Search */}
               <Card>
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-base lg:text-lg">Buscar Clientes</CardTitle>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-base lg:text-lg">Buscar Clientes</CardTitle>
+                    <Link to="/clients/new">
+                      <Button size="sm" className="bg-primary hover:bg-primary-600">
+                        <User className="w-4 h-4 mr-2" />
+                        Novo Cliente
+                      </Button>
+                    </Link>
+                  </div>
                 </CardHeader>
                 <CardContent>
                   <div className="relative">
@@ -251,10 +259,12 @@ export default function Clients() {
                                     </Button>
                                   </DropdownMenuTrigger>
                                   <DropdownMenuContent>
-                                    <DropdownMenuItem>
-                                      <User className="w-4 h-4 mr-2" />
-                                      Ver Perfil
-                                    </DropdownMenuItem>
+                                    <Link to={`/clients/edit/${client.id}`}>
+                                      <DropdownMenuItem>
+                                        <User className="w-4 h-4 mr-2" />
+                                        Editar Cliente
+                                      </DropdownMenuItem>
+                                    </Link>
                                     <DropdownMenuItem>
                                       <Mail className="w-4 h-4 mr-2" />
                                       Enviar Email
