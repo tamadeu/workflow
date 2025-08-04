@@ -271,28 +271,57 @@ export default function TicketsTable() {
         )}
         
         <div className="px-6 py-4 border-t border-gray-200">
-          <div className="flex items-center justify-between">
-            <div className="text-sm text-gray-500">
-              Mostrando 1-{tickets.length} de {tickets.length} chamados
+          {isMobile ? (
+            /* Mobile Pagination - Compact */
+            <div className="flex flex-col space-y-3">
+              <div className="text-sm text-gray-500 text-center">
+                Mostrando 1-{tickets.length} de {tickets.length}
+              </div>
+              <div className="flex items-center justify-center space-x-2">
+                <Button variant="outline" size="sm" disabled className="text-xs px-3">
+                  ‹ Ant
+                </Button>
+                <div className="flex items-center space-x-1">
+                  <Button variant="default" size="sm" className="bg-primary text-xs w-8 h-8 p-0">
+                    1
+                  </Button>
+                  <Button variant="outline" size="sm" className="text-xs w-8 h-8 p-0">
+                    2
+                  </Button>
+                  <Button variant="outline" size="sm" className="text-xs w-8 h-8 p-0">
+                    3
+                  </Button>
+                </div>
+                <Button variant="outline" size="sm" className="text-xs px-3">
+                  Prox ›
+                </Button>
+              </div>
             </div>
-            <div className="flex items-center space-x-2">
-              <Button variant="outline" size="sm" disabled>
-                Anterior
-              </Button>
-              <Button variant="default" size="sm" className="bg-primary">
-                1
-              </Button>
-              <Button variant="outline" size="sm">
-                2
-              </Button>
-              <Button variant="outline" size="sm">
-                3
-              </Button>
-              <Button variant="outline" size="sm">
-                Próximo
-              </Button>
+          ) : (
+            /* Desktop Pagination */
+            <div className="flex items-center justify-between">
+              <div className="text-sm text-gray-500">
+                Mostrando 1-{tickets.length} de {tickets.length} chamados
+              </div>
+              <div className="flex items-center space-x-2">
+                <Button variant="outline" size="sm" disabled>
+                  Anterior
+                </Button>
+                <Button variant="default" size="sm" className="bg-primary">
+                  1
+                </Button>
+                <Button variant="outline" size="sm">
+                  2
+                </Button>
+                <Button variant="outline" size="sm">
+                  3
+                </Button>
+                <Button variant="outline" size="sm">
+                  Próximo
+                </Button>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
 
