@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Search, User, Phone, Mail, MoreHorizontal, Eye } from "lucide-react";
+import { Search, User, Phone, Mail, MoreHorizontal, Eye, ArrowLeft } from "lucide-react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,6 +10,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import Header from "@/components/layout/header";
+import { useIsMobile } from "@/hooks/use-mobile";
 import type { User as ClientType, Ticket } from "@shared/schema";
 
 interface ClientWithTickets extends ClientType {
@@ -21,6 +22,7 @@ interface ClientWithTickets extends ClientType {
 export default function Clients() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedClient, setSelectedClient] = useState<ClientWithTickets | null>(null);
+  const isMobile = useIsMobile();
 
   const { data: clients = [], isLoading: clientsLoading } = useQuery<ClientWithTickets[]>({
     queryKey: ["/api/clients"],
@@ -121,13 +123,13 @@ export default function Clients() {
       />
       
       <main className="flex-1 overflow-y-auto">
-        <div className="p-6 space-y-6">
+        <div className="p-4 lg:p-6 space-y-4 lg:space-y-6">
           {!selectedClient ? (
             <>
               {/* Search */}
               <Card>
-                <CardHeader>
-                  <CardTitle>Buscar Clientes</CardTitle>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base lg:text-lg">Buscar Clientes</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="relative">
@@ -145,12 +147,48 @@ export default function Clients() {
 
               {/* Clients List */}
               <Card>
-                <CardHeader>
-                  <CardTitle>Lista de Clientes ({filteredClients.length})</CardTitle>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base lg:text-lg">Lista de Clientes ({filteredClients.length})</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="overflow-x-auto">
-                    <Table>
+                  {isMobile ? (
+                    /* Mobile View - Card based */
+                    <div className="space-y-3">
+                      {filteredClients.map((client) => (
+                        <div
+                          key={client.id}
+                          className="border rounded-lg p-4 hover:bg-gray-50 cursor-pointer"
+                          onClick={() => setSelectedClient(client)}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-3 flex-1 min-w-0">
+                              <Avatar className="h-10 w-10">
+                                <AvatarFallback>
+                                  {getInitials(client.name)}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div className="flex-1 min-w-0">
+                                <h3 className="font-medium text-gray-900 truncate">{client.name}</h3>
+                                <p className="text-sm text-gray-500 truncate">{client.email}</p>
+                                <div className="flex items-center space-x-4 mt-1">
+                                  <Badge variant="outline" className="text-xs">
+                                    {client.openTickets} Aberto{client.openTickets !== 1 ? 's' : ''}
+                                  </Badge>
+                                  <span className="text-xs text-gray-500">
+                                    Total: {client.totalTickets}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                            <Eye className="w-4 h-4 text-gray-400" />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    /* Desktop View - Table */
+                    <div className="overflow-x-auto">
+                      <Table>
                       <TableHeader>
                         <TableRow>
                           <TableHead>Cliente</TableHead>
@@ -229,7 +267,8 @@ export default function Clients() {
                         ))}
                       </TableBody>
                     </Table>
-                  </div>
+                    </div>
+                  )}
                   
                   {filteredClients.length === 0 && (
                     <div className="text-center py-8 text-gray-500">
@@ -247,15 +286,18 @@ export default function Clients() {
             <>
               {/* Client Details Header */}
               <Card>
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-4">
+                <CardHeader className="pb-3">
+                  {isMobile ? (
+                    /* Mobile Client Header */
+                    <div className="space-y-4">
                       <Button
                         data-testid="button-back-to-clients"
                         variant="outline"
                         onClick={() => setSelectedClient(null)}
+                        className="w-full justify-start"
                       >
-                        ← Voltar para Clientes
+                        <ArrowLeft className="w-4 h-4 mr-2" />
+                        Voltar para Clientes
                       </Button>
                       <div className="flex items-center space-x-3">
                         <Avatar className="w-12 h-12">
@@ -263,23 +305,58 @@ export default function Clients() {
                             {getInitials(selectedClient.name)}
                           </AvatarFallback>
                         </Avatar>
-                        <div>
-                          <h2 className="text-xl font-semibold text-gray-900">{selectedClient.name}</h2>
-                          <p className="text-sm text-gray-500">{selectedClient.email}</p>
+                        <div className="flex-1 min-w-0">
+                          <h2 className="text-lg font-semibold text-gray-900 truncate">{selectedClient.name}</h2>
+                          <p className="text-sm text-gray-500 truncate">{selectedClient.email}</p>
+                        </div>
+                      </div>
+                      <div className="flex justify-around bg-gray-50 rounded-lg p-3">
+                        <div className="text-center">
+                          <div className="text-xl font-bold text-primary">{selectedClient.openTickets}</div>
+                          <div className="text-xs text-gray-500">Abertos</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-xl font-bold text-gray-700">{selectedClient.totalTickets}</div>
+                          <div className="text-xs text-gray-500">Total</div>
                         </div>
                       </div>
                     </div>
-                    <div className="flex space-x-4 text-sm">
-                      <div className="text-center">
-                        <div className="text-2xl font-bold text-primary">{selectedClient.openTickets}</div>
-                        <div className="text-gray-500">Abertos</div>
+                  ) : (
+                    /* Desktop Client Header */
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-4">
+                        <Button
+                          data-testid="button-back-to-clients"
+                          variant="outline"
+                          onClick={() => setSelectedClient(null)}
+                        >
+                          <ArrowLeft className="w-4 h-4 mr-2" />
+                          Voltar para Clientes
+                        </Button>
+                        <div className="flex items-center space-x-3">
+                          <Avatar className="w-12 h-12">
+                            <AvatarFallback className="text-lg">
+                              {getInitials(selectedClient.name)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <h2 className="text-xl font-semibold text-gray-900">{selectedClient.name}</h2>
+                            <p className="text-sm text-gray-500">{selectedClient.email}</p>
+                          </div>
+                        </div>
                       </div>
-                      <div className="text-center">
-                        <div className="text-2xl font-bold text-gray-700">{selectedClient.totalTickets}</div>
-                        <div className="text-gray-500">Total</div>
+                      <div className="flex space-x-4 text-sm">
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-primary">{selectedClient.openTickets}</div>
+                          <div className="text-gray-500">Abertos</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-gray-700">{selectedClient.totalTickets}</div>
+                          <div className="text-gray-500">Total</div>
+                        </div>
                       </div>
                     </div>
-                  </div>
+                  )}
                 </CardHeader>
               </Card>
 
