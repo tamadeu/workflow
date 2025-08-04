@@ -10,9 +10,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { TagInput } from "@/components/ui/tag-input";
+import { Combobox } from "@/components/ui/combobox";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import type { Queue, TicketType, Label } from "@shared/schema";
+import type { Queue, TicketType, Label, User } from "@shared/schema";
 
 const ticketFormSchema = z.object({
   title: z.string().min(1, "Título é obrigatório"),
@@ -20,6 +21,7 @@ const ticketFormSchema = z.object({
   priority: z.enum(["low", "medium", "high", "critical"]),
   typeId: z.string().optional(),
   queueId: z.string().optional(),
+  requesterId: z.string().min(1, "Cliente é obrigatório"),
   customFields: z.record(z.any()).optional(),
 });
 
@@ -46,6 +48,10 @@ export default function TicketForm({ onSuccess }: TicketFormProps) {
     queryKey: ["/api/labels"],
   });
 
+  const { data: users } = useQuery<User[]>({
+    queryKey: ["/api/users"],
+  });
+
   const form = useForm<TicketFormData>({
     resolver: zodResolver(ticketFormSchema),
     defaultValues: {
@@ -55,12 +61,9 @@ export default function TicketForm({ onSuccess }: TicketFormProps) {
 
   const createTicketMutation = useMutation({
     mutationFn: async (data: TicketFormData) => {
-      // Get current user ID (would come from auth context in real app)
-      const requesterId = "current-user-id";
-      
       const response = await apiRequest("POST", "/api/tickets", {
         ...data,
-        requesterId,
+        labels: selectedLabels,
       });
       return response.json();
     },
@@ -178,16 +181,34 @@ export default function TicketForm({ onSuccess }: TicketFormProps) {
               />
             </div>
 
-            {/* Custom Field - CPF */}
-            <FormItem>
-              <FormLabel>CPF do Solicitante</FormLabel>
-              <FormControl>
-                <Input
-                  data-testid="input-cpf"
-                  placeholder="000.000.000-00"
-                />
-              </FormControl>
-            </FormItem>
+            {/* Client Selector */}
+            <FormField
+              control={form.control}
+              name="requesterId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Cliente Solicitante</FormLabel>
+                  <FormControl>
+                    <Combobox
+                      data-testid="select-client"
+                      options={
+                        users?.map((user) => ({
+                          value: user.id,
+                          label: user.name,
+                          email: user.email,
+                        })) || []
+                      }
+                      value={field.value}
+                      onValueChange={field.onChange}
+                      placeholder="Buscar cliente por nome ou email..."
+                      searchPlaceholder="Digite para buscar..."
+                      emptyText="Nenhum cliente encontrado."
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             {/* Title */}
             <FormField
