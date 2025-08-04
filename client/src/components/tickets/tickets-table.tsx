@@ -118,32 +118,64 @@ export default function TicketsTable() {
   return (
     <>
       <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900">Chamados Recentes</h3>
-              <p className="text-sm text-gray-500">Últimos chamados abertos no sistema</p>
+        <div className="px-4 lg:px-6 py-4 border-b border-gray-200">
+          {isMobile ? (
+            /* Mobile Header - Compact */
+            <div className="space-y-3">
+              <div>
+                <h3 className="text-base font-semibold text-gray-900">Chamados Recentes</h3>
+                <p className="text-xs text-gray-500">Últimos chamados abertos no sistema</p>
+              </div>
+              <div className="flex items-center justify-between">
+                <Button
+                  data-testid="button-advanced-filter"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowAdvancedFilter(true)}
+                  className="text-xs px-3 py-2 h-8"
+                >
+                  <Filter className="w-3 h-3 mr-1" />
+                  Filtro Avançado
+                </Button>
+                <Button
+                  data-testid="button-export"
+                  variant="outline"
+                  size="sm"
+                  className="text-xs px-3 py-2 h-8"
+                >
+                  <Download className="w-3 h-3 mr-1" />
+                  Exportar
+                </Button>
+              </div>
             </div>
-            <div className="flex items-center space-x-3">
-              <Button
-                data-testid="button-advanced-filter"
-                variant="outline"
-                size="sm"
-                onClick={() => setShowAdvancedFilter(true)}
-              >
-                <Filter className="w-4 h-4 mr-1" />
-                Filtro Avançado
-              </Button>
-              <Button
-                data-testid="button-export"
-                variant="outline"
-                size="sm"
-              >
-                <Download className="w-4 h-4 mr-1" />
-                Exportar
-              </Button>
+          ) : (
+            /* Desktop Header */
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">Chamados Recentes</h3>
+                <p className="text-sm text-gray-500">Últimos chamados abertos no sistema</p>
+              </div>
+              <div className="flex items-center space-x-3">
+                <Button
+                  data-testid="button-advanced-filter"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowAdvancedFilter(true)}
+                >
+                  <Filter className="w-4 h-4 mr-1" />
+                  Filtro Avançado
+                </Button>
+                <Button
+                  data-testid="button-export"
+                  variant="outline"
+                  size="sm"
+                >
+                  <Download className="w-4 h-4 mr-1" />
+                  Exportar
+                </Button>
+              </div>
             </div>
-          </div>
+          )}
         </div>
         
         {/* Mobile View */}
