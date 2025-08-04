@@ -1,7 +1,8 @@
-import { Search, Bell, Plus } from "lucide-react";
+import { Search, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useIsMobile } from "@/hooks/use-mobile";
+import NotificationsDropdown from "@/components/notifications/notifications-dropdown";
 
 interface HeaderProps {
   title: string;
@@ -36,15 +37,7 @@ export default function Header({ title, subtitle, showNewTicketButton = true }: 
           )}
           
           {/* Notifications */}
-          <button 
-            data-testid="button-notifications"
-            className="relative p-2 text-gray-400 hover:text-gray-600"
-          >
-            <Bell className="w-5 h-5" />
-            <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
-              3
-            </span>
-          </button>
+          <NotificationsDropdown />
           
           {/* New Ticket Button */}
           {showNewTicketButton && (

@@ -32,6 +32,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { cn } from "@/lib/utils";
 import type { Ticket, TicketComment, User, Queue, Label as LabelType } from "@shared/schema";
@@ -50,6 +51,7 @@ export default function TicketDetails() {
   const [newComment, setNewComment] = useState("");
   const [isInternal, setIsInternal] = useState(false);
   const [showInternalComments, setShowInternalComments] = useState(true);
+  const isMobile = useIsMobile();
 
   const { toast } = useToast();
 
@@ -273,52 +275,55 @@ export default function TicketDetails() {
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header */}
-        <div className="bg-white border-b border-gray-200 px-6 py-4">
+        <div className="bg-white border-b border-gray-200 px-4 sm:px-6 py-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2 sm:space-x-4 min-w-0 flex-1">
               <Button
                 data-testid="button-back"
                 variant="ghost"
                 size="sm"
                 onClick={() => setLocation("/my-tickets")}
+                className="flex-shrink-0"
               >
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Voltar
+                <ArrowLeft className="w-4 h-4 mr-1 sm:mr-2" />
+                <span className="hidden sm:inline">Voltar</span>
               </Button>
-              <div className="flex items-center space-x-3">
+              <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1">
                 <h1 
                   data-testid="ticket-number"
-                  className="text-2xl font-bold text-gray-900"
+                  className="text-lg sm:text-2xl font-bold text-gray-900 truncate"
                 >
                   #{ticket.number}
                 </h1>
-                <Badge className={getPriorityColor(ticket.priority)}>
-                  {ticket.priority === "critical" && <AlertTriangle className="w-3 h-3 mr-1" />}
-                  {getPriorityLabel(ticket.priority)}
-                </Badge>
-                {hasOverdueSLA && (
-                  <Badge variant="destructive">
-                    <AlertTriangle className="w-3 h-3 mr-1" />
-                    SLA Vencido
+                <div className="flex flex-wrap gap-1 sm:gap-2">
+                  <Badge className={cn(getPriorityColor(ticket.priority), "text-xs")}>
+                    {ticket.priority === "critical" && <AlertTriangle className="w-3 h-3 mr-1" />}
+                    {isMobile ? ticket.priority.charAt(0).toUpperCase() : getPriorityLabel(ticket.priority)}
                   </Badge>
-                )}
-                {ticket.isPaused && (
-                  <Badge variant="secondary">
-                    <Pause className="w-3 h-3 mr-1" />
-                    Pausado
-                  </Badge>
-                )}
+                  {hasOverdueSLA && (
+                    <Badge variant="destructive" className="text-xs">
+                      <AlertTriangle className="w-3 h-3 mr-1" />
+                      {isMobile ? "SLA!" : "SLA Vencido"}
+                    </Badge>
+                  )}
+                  {ticket.isPaused && (
+                    <Badge variant="secondary" className="text-xs">
+                      <Pause className="w-3 h-3 mr-1" />
+                      {isMobile ? "Pausado" : "Pausado"}
+                    </Badge>
+                  )}
+                </div>
               </div>
             </div>
             
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-1 sm:space-x-2 flex-shrink-0">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" size="sm">
                     <MoreHorizontal className="w-4 h-4" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent>
+                <DropdownMenuContent align="end">
                   <DropdownMenuItem onClick={() => handleStatusChange(ticket.isPaused ? "in_progress" : "open")}>
                     {ticket.isPaused ? (
                       <>
@@ -344,67 +349,82 @@ export default function TicketDetails() {
 
         {/* Content */}
         <div className="flex-1 flex overflow-hidden">
-          {/* Ticket Details & Comments */}
-          <div className="flex-1 flex flex-col overflow-hidden p-6">
-            {/* Ticket Title & Description */}
-            <Card className="mb-6">
-              <CardHeader>
-                <CardTitle data-testid="ticket-title" className="text-xl">
-                  {ticket.title}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
-                  {ticket.description}
-                </p>
-                
-                {/* Labels */}
-                {ticket.labels && ticket.labels.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mt-4">
-                    {ticket.labels.map((label) => (
-                      <Badge
-                        key={label.id}
-                        variant="outline"
-                        style={{
-                          backgroundColor: `${label.color}20`,
-                          borderColor: `${label.color}40`,
-                          color: label.color,
-                        }}
-                        className="text-xs"
-                      >
-                        <Tag className="w-3 h-3 mr-1" />
-                        {label.name}
-                      </Badge>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Comments Section */}
-            <Card className="flex-1 flex flex-col overflow-hidden">
-              <CardHeader className="flex-shrink-0">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="flex items-center space-x-2">
-                    <MessageCircle className="w-5 h-5" />
-                    <span>Conversação ({filteredComments.length})</span>
+          {/* Main Content Area */}
+          <div className={cn(
+            "flex-1 flex overflow-hidden",
+            isMobile ? "flex-col" : "flex-row"
+          )}>
+            {/* Ticket Details & Comments */}
+            <div className={cn(
+              "flex flex-col overflow-hidden p-4 sm:p-6",
+              isMobile ? "flex-1" : "flex-1"
+            )}>
+              {/* Ticket Title & Description */}
+              <Card className="mb-4 sm:mb-6">
+                <CardHeader className="pb-3 sm:pb-6">
+                  <CardTitle 
+                    data-testid="ticket-title" 
+                    className="text-lg sm:text-xl leading-tight"
+                  >
+                    {ticket.title}
                   </CardTitle>
-                  <div className="flex items-center space-x-3">
-                    <div className="flex items-center space-x-2">
-                      <EyeOff className="w-4 h-4 text-gray-500" />
-                      <Switch
-                        checked={showInternalComments}
-                        onCheckedChange={setShowInternalComments}
-                      />
-                      <Eye className="w-4 h-4 text-gray-500" />
-                      <span className="text-sm text-gray-600">Notas internas</span>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-gray-700 leading-relaxed whitespace-pre-wrap text-sm sm:text-base">
+                    {ticket.description}
+                  </p>
+                  
+                  {/* Labels */}
+                  {ticket.labels && ticket.labels.length > 0 && (
+                    <div className="flex flex-wrap gap-1 sm:gap-2 mt-3 sm:mt-4">
+                      {ticket.labels.map((label) => (
+                        <Badge
+                          key={label.id}
+                          variant="outline"
+                          style={{
+                            backgroundColor: `${label.color}20`,
+                            borderColor: `${label.color}40`,
+                            color: label.color,
+                          }}
+                          className="text-xs"
+                        >
+                          <Tag className="w-3 h-3 mr-1" />
+                          {label.name}
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Comments Section */}
+              <Card className="flex-1 flex flex-col overflow-hidden">
+                <CardHeader className="flex-shrink-0 pb-3 sm:pb-6">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="flex items-center space-x-2">
+                      <MessageCircle className="w-4 h-4 sm:w-5 sm:h-5" />
+                      <span className="text-sm sm:text-base">
+                        {isMobile ? `(${filteredComments.length})` : `Conversação (${filteredComments.length})`}
+                      </span>
+                    </CardTitle>
+                    <div className="flex items-center space-x-2 sm:space-x-3">
+                      <div className="flex items-center space-x-1 sm:space-x-2">
+                        <EyeOff className="w-3 h-3 sm:w-4 sm:h-4 text-gray-500" />
+                        <Switch
+                          checked={showInternalComments}
+                          onCheckedChange={setShowInternalComments}
+                        />
+                        <Eye className="w-3 h-3 sm:w-4 sm:h-4 text-gray-500" />
+                        <span className="text-xs sm:text-sm text-gray-600 hidden sm:inline">
+                          Notas internas
+                        </span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </CardHeader>
+                </CardHeader>
               
-              {/* Comments List */}
-              <div className="flex-1 overflow-y-auto p-6 space-y-4">
+                {/* Comments List */}
+                <div className="flex-1 overflow-y-auto p-3 sm:p-6 space-y-3 sm:space-y-4">
                 {filteredComments.map((comment) => (
                   <div
                     key={comment.id}
@@ -495,10 +515,11 @@ export default function TicketDetails() {
                 </div>
               </div>
             </Card>
-          </div>
+            </div>
 
-          {/* Sidebar */}
-          <div className="w-80 bg-gray-50 border-l border-gray-200 p-6 space-y-6 overflow-y-auto">
+            {/* Sidebar - Mobile: Bottom sheet style, Desktop: Right sidebar */}
+            {!isMobile ? (
+              <div className="w-80 bg-gray-50 border-l border-gray-200 p-6 space-y-6 overflow-y-auto">
             {/* Status Actions */}
             <Card>
               <CardHeader>
@@ -650,6 +671,98 @@ export default function TicketDetails() {
                 )}
               </CardContent>
             </Card>
+              </div>
+            ) : (
+              /* Mobile: Sidebar content as collapsible cards at bottom */
+              <div className="border-t border-gray-200 p-4 space-y-4 bg-gray-50">
+                {/* Mobile Status Actions */}
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm">Ações Rápidas</CardTitle>
+                  </CardHeader>
+                  <CardContent className="grid grid-cols-2 gap-3">
+                    <Select value={ticket.status} onValueChange={handleStatusChange}>
+                      <SelectTrigger data-testid="select-status-mobile" className="text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="open">Aberto</SelectItem>
+                        <SelectItem value="in_progress">Em Andamento</SelectItem>
+                        <SelectItem value="resolved">Resolvido</SelectItem>
+                        <SelectItem value="closed">Fechado</SelectItem>
+                      </SelectContent>
+                    </Select>
+
+                    <Select value={ticket.priority} onValueChange={handlePriorityChange}>
+                      <SelectTrigger data-testid="select-priority-mobile" className="text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="low">Baixa</SelectItem>
+                        <SelectItem value="medium">Média</SelectItem>
+                        <SelectItem value="high">Alta</SelectItem>
+                        <SelectItem value="critical">Crítica</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </CardContent>
+                </Card>
+
+                {/* Mobile SLA */}
+                {ticket.slaDeadline && (
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm flex items-center">
+                        <Timer className="w-4 h-4 mr-2" />
+                        SLA
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-gray-600">Progresso</span>
+                          <span className={cn(
+                            "font-medium",
+                            hasOverdueSLA ? "text-red-600" : slaProgress > 80 ? "text-yellow-600" : "text-green-600"
+                          )}>
+                            {Math.round(slaProgress)}%
+                          </span>
+                        </div>
+                        <Progress 
+                          value={slaProgress} 
+                          className={cn(
+                            "h-2",
+                            hasOverdueSLA ? "bg-red-100" : slaProgress > 80 ? "bg-yellow-100" : "bg-green-100"
+                          )}
+                        />
+                        <div className="text-xs text-gray-500">
+                          Prazo: {formatDate(ticket.slaDeadline)}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Mobile Time Tracking */}
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm flex items-center">
+                      <Clock className="w-4 h-4 mr-2" />
+                      Tempo
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-primary">
+                        {calculateTimeSpent(ticket.createdAt, ticket.updatedAt)}
+                      </div>
+                      <div className="text-xs text-gray-500 mt-1">
+                        Calculado automaticamente
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
           </div>
         </div>
       </div>
