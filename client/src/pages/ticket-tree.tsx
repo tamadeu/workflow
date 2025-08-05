@@ -251,17 +251,19 @@ export default function TicketTree() {
       />
       
       <main className="flex-1 overflow-y-auto">
-        <div className="p-6">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="p-4 lg:p-6 pb-20 lg:pb-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
             {/* Tree View */}
-            <div className="lg:col-span-2">
+            <div className="lg:col-span-2 order-2 lg:order-1">
               <Card className="shadow-sm border border-gray-200">
                 <CardHeader className="border-b border-gray-200">
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col space-y-4 lg:flex-row lg:items-center lg:justify-between lg:space-y-0">
                     <CardTitle className="text-lg font-semibold text-gray-900">
                       Estrutura Hierárquica
                     </CardTitle>
-                    <div className="flex items-center space-x-2">
+                    
+                    {/* Mobile and Desktop Search */}
+                    <div className="flex flex-col space-y-3 lg:flex-row lg:items-center lg:space-y-0 lg:space-x-2">
                       <div className="relative">
                         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                         <Input
@@ -269,20 +271,26 @@ export default function TicketTree() {
                           placeholder="Buscar na árvore..."
                           value={searchTerm}
                           onChange={(e) => setSearchTerm(e.target.value)}
-                          className="pl-10 w-64"
+                          className="pl-10 w-full lg:w-64"
                         />
                       </div>
-                      <Button data-testid="button-expand-all" variant="outline" size="sm">
-                        Expandir Tudo
-                      </Button>
-                      <Button data-testid="button-collapse-all" variant="outline" size="sm">
-                        Recolher Tudo
-                      </Button>
+                      
+                      {/* Mobile Buttons - Stack Vertically */}
+                      <div className="flex space-x-2 lg:space-x-2">
+                        <Button data-testid="button-expand-all" variant="outline" size="sm" className="flex-1 lg:flex-none">
+                          <span className="hidden lg:inline">Expandir Tudo</span>
+                          <span className="lg:hidden">Expandir</span>
+                        </Button>
+                        <Button data-testid="button-collapse-all" variant="outline" size="sm" className="flex-1 lg:flex-none">
+                          <span className="hidden lg:inline">Recolher Tudo</span>
+                          <span className="lg:hidden">Recolher</span>
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 </CardHeader>
                 <CardContent className="p-4">
-                  <div className="space-y-1 max-h-[600px] overflow-y-auto">
+                  <div className="space-y-1 max-h-[400px] lg:max-h-[600px] overflow-y-auto">
                     {treeData.map(node => renderTreeNode(node))}
                   </div>
                 </CardContent>
@@ -290,7 +298,7 @@ export default function TicketTree() {
             </div>
             
             {/* Statistics and Actions */}
-            <div className="space-y-6">
+            <div className="space-y-4 lg:space-y-6 order-1 lg:order-2">
               <Card className="shadow-sm border border-gray-200">
                 <CardHeader>
                   <CardTitle className="text-lg font-semibold text-gray-900">

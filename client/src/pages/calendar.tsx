@@ -57,16 +57,16 @@ export default function Calendar() {
       />
       
       <main className="flex-1 overflow-y-auto">
-        <div className="p-6">
+        <div className="p-4 lg:p-6 pb-20 lg:pb-6">
           <Card className="shadow-sm border border-gray-200">
             <CardHeader className="border-b border-gray-200">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col space-y-4 lg:flex-row lg:items-center lg:justify-between lg:space-y-0">
                 <CardTitle className="text-lg font-semibold text-gray-900">
                   Calendário de Chamados
                 </CardTitle>
-                <div className="flex items-center space-x-3">
+                <div className="flex flex-col space-y-2 lg:flex-row lg:items-center lg:space-y-0 lg:space-x-3">
                   <Select value="all" onValueChange={() => {}}>
-                    <SelectTrigger data-testid="select-status-filter" className="w-48">
+                    <SelectTrigger data-testid="select-status-filter" className="w-full lg:w-48">
                       <SelectValue placeholder="Filtrar por status" />
                     </SelectTrigger>
                     <SelectContent>
@@ -80,6 +80,7 @@ export default function Calendar() {
                     variant="outline" 
                     size="sm"
                     onClick={goToToday}
+                    className="w-full lg:w-auto"
                   >
                     Hoje
                   </Button>
@@ -88,8 +89,8 @@ export default function Calendar() {
             </CardHeader>
             <CardContent className="p-6">
               {/* Calendar Navigation */}
-              <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center space-x-2">
+              <div className="flex flex-col space-y-4 lg:flex-row lg:items-center lg:justify-between lg:space-y-0 mb-6">
+                <div className="flex items-center justify-center space-x-2">
                   <Button 
                     data-testid="button-previous-month"
                     variant="outline" 
@@ -98,7 +99,7 @@ export default function Calendar() {
                   >
                     <ChevronLeft className="w-4 h-4" />
                   </Button>
-                  <h2 className="text-xl font-semibold capitalize" data-testid="text-current-month">
+                  <h2 className="text-lg lg:text-xl font-semibold capitalize text-center min-w-[200px]" data-testid="text-current-month">
                     {monthName}
                   </h2>
                   <Button 
@@ -111,7 +112,7 @@ export default function Calendar() {
                   </Button>
                 </div>
                 <Select value={view} onValueChange={setView}>
-                  <SelectTrigger data-testid="select-calendar-view" className="w-32">
+                  <SelectTrigger data-testid="select-calendar-view" className="w-full lg:w-32">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -128,7 +129,7 @@ export default function Calendar() {
                 {weekDays.map((day) => (
                   <div 
                     key={day} 
-                    className="text-center text-sm font-medium text-gray-500 py-2 border-b border-gray-200"
+                    className="text-center text-xs lg:text-sm font-medium text-gray-500 py-2 border-b border-gray-200"
                   >
                     {day}
                   </div>
@@ -140,7 +141,7 @@ export default function Calendar() {
                     key={index}
                     data-testid={day ? `calendar-day-${day}` : `calendar-empty-${index}`}
                     className={`
-                      min-h-[100px] p-2 border border-gray-100 
+                      min-h-[60px] lg:min-h-[100px] p-1 lg:p-2 border border-gray-100 
                       ${day ? 'bg-white hover:bg-gray-50 cursor-pointer' : 'bg-gray-50'}
                       ${day === new Date().getDate() && 
                         currentDate.getMonth() === new Date().getMonth() && 
