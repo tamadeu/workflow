@@ -69,7 +69,7 @@ export default function Sidebar({ isMobile, isOpen = false, onClose }: SidebarPr
         {/* Mobile Sidebar */}
         <div
           className={cn(
-            "fixed left-0 top-0 h-full w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out z-50 lg:hidden",
+            "fixed left-0 top-0 h-full w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out z-50 lg:hidden flex flex-col",
             isOpen ? "translate-x-0" : "-translate-x-full"
           )}
         >
@@ -95,15 +95,32 @@ interface SidebarContentProps {
 function SidebarContent({ location, onItemClick, isMobile }: SidebarContentProps) {
   return (
     <>
-      {/* Logo */}
-      <div className="p-6 border-b border-gray-200">
-        <div className="flex items-center space-x-3">
-          <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-            <TicketIcon className="w-4 h-4 text-white" />
+      {/* Mobile Header with Close Button */}
+      {isMobile && (
+        <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+              <TicketIcon className="w-4 h-4 text-white" />
+            </div>
+            <span className="text-xl font-semibold text-gray-900">Chamados Pro</span>
           </div>
-          <span className="text-xl font-semibold text-gray-900">Chamados Pro</span>
+          <Button variant="ghost" size="sm" onClick={onItemClick}>
+            <X className="w-4 h-4" />
+          </Button>
         </div>
-      </div>
+      )}
+
+      {/* Desktop Logo */}
+      {!isMobile && (
+        <div className="p-6 border-b border-gray-200">
+          <div className="flex items-center space-x-3">
+            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+              <TicketIcon className="w-4 h-4 text-white" />
+            </div>
+            <span className="text-xl font-semibold text-gray-900">Chamados Pro</span>
+          </div>
+        </div>
+      )}
 
       {/* Navigation */}
       <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
