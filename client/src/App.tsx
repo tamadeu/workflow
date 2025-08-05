@@ -6,6 +6,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 import Dashboard from "@/pages/dashboard";
 import NewTicket from "@/pages/new-ticket";
+import NewTicketQuick from "@/pages/new-ticket-quick";
+import NewTicketFull from "@/pages/new-ticket-full";
 import MyTickets from "@/pages/my-tickets";
 import TicketDetails from "@/pages/ticket-details";
 import Calendar from "@/pages/calendar";
@@ -46,6 +48,8 @@ function Router() {
         <Switch>
           <Route path="/" component={Dashboard} />
           <Route path="/new-ticket" component={NewTicket} />
+          <Route path="/tickets/new/quick" component={NewTicketQuick} />
+          <Route path="/tickets/new/full" component={NewTicketFull} />
           <Route path="/my-tickets" component={MyTickets} />
           <Route path="/ticket/:ticketId" component={TicketDetails} />
           <Route path="/calendar" component={Calendar} />
