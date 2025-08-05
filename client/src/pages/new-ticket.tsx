@@ -6,11 +6,11 @@ import Header from "@/components/layout/header";
 
 export default function NewTicket() {
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background flex flex-col">
       <Header title="Criar Ticket" />
       
       <main className="flex-1 overflow-y-auto">
-        <div className="p-4 lg:p-6 space-y-4 lg:space-y-6">
+        <div className="p-4 lg:p-6 space-y-4 lg:space-y-6 pb-20 lg:pb-6">
           
           {/* Header */}
           <div className="flex items-center justify-between">
@@ -28,11 +28,11 @@ export default function NewTicket() {
           </div>
 
           {/* Opções de Abertura */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 md:gap-6">
             
             {/* Abertura Rápida */}
             <Link to="/tickets/new/quick">
-              <Card className="h-full cursor-pointer transition-all hover:shadow-lg hover:border-primary/50 group">
+              <Card className="cursor-pointer transition-all hover:shadow-lg hover:border-primary/50 group h-auto min-h-[320px]">
                 <CardHeader className="text-center pb-4">
                   <div className="w-16 h-16 mx-auto mb-4 bg-blue-100 dark:bg-blue-900/20 rounded-full flex items-center justify-center group-hover:bg-blue-200 dark:group-hover:bg-blue-900/40 transition-colors">
                     <Zap className="w-8 h-8 text-blue-600 dark:text-blue-400" />
@@ -71,7 +71,7 @@ export default function NewTicket() {
 
             {/* Abertura Completa */}
             <Link to="/tickets/new/full">
-              <Card className="h-full cursor-pointer transition-all hover:shadow-lg hover:border-primary/50 group">
+              <Card className="cursor-pointer transition-all hover:shadow-lg hover:border-primary/50 group h-auto min-h-[320px]">
                 <CardHeader className="text-center pb-4">
                   <div className="w-16 h-16 mx-auto mb-4 bg-green-100 dark:bg-green-900/20 rounded-full flex items-center justify-center group-hover:bg-green-200 dark:group-hover:bg-green-900/40 transition-colors">
                     <FileEdit className="w-8 h-8 text-green-600 dark:text-green-400" />

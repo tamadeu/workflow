@@ -14,7 +14,7 @@ export default function Header({ title, subtitle, showNewTicketButton = true }: 
   const isMobile = useIsMobile();
 
   return (
-    <header className="bg-white shadow-sm border-b border-gray-200 px-4 lg:px-6 py-3 lg:py-4">
+    <header className="bg-white shadow-sm border-b border-gray-200 px-4 lg:px-6 py-3 lg:py-4 flex-shrink-0">
       {isMobile ? (
         /* Mobile Header - Simplified */
         <div className="flex items-center justify-between">
