@@ -141,11 +141,11 @@ export default function NewTicketFull() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background flex flex-col">
       <Header title="Abertura Completa" />
       
       <main className="flex-1 overflow-y-auto">
-        <div className="p-4 lg:p-6 space-y-4 lg:space-y-6">
+        <div className="p-4 lg:p-6 space-y-4 lg:space-y-6 pb-20 lg:pb-6">
           
           {/* Header com opções */}
           <div className="flex items-center justify-between">
@@ -387,7 +387,7 @@ export default function NewTicketFull() {
                               value={field.value}
                               onChange={field.onChange}
                               modules={quillModules}
-                              style={{ minHeight: '200px' }}
+                              className="min-h-[200px]"
                             />
                           </div>
                         </FormControl>
@@ -400,9 +400,9 @@ export default function NewTicketFull() {
                   <div className="space-y-3">
                     <FormLabel>Anexos</FormLabel>
                     
-                    <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6 text-center">
-                      <Upload className="w-8 h-8 mx-auto text-gray-400 mb-2" />
-                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                    <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4 lg:p-6 text-center">
+                      <Upload className="w-6 h-6 lg:w-8 lg:h-8 mx-auto text-gray-400 mb-2" />
+                      <p className="text-xs lg:text-sm text-gray-600 dark:text-gray-400 mb-2">
                         Arraste arquivos aqui ou clique para selecionar
                       </p>
                       <input
@@ -416,6 +416,7 @@ export default function NewTicketFull() {
                       <Button
                         type="button"
                         variant="outline"
+                        size="sm"
                         onClick={() => fileInputRef.current?.click()}
                       >
                         <Paperclip className="w-4 h-4 mr-2" />

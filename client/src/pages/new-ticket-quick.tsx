@@ -64,11 +64,11 @@ export default function NewTicketQuick() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background flex flex-col">
       <Header title="Abertura Rápida" />
       
       <main className="flex-1 overflow-y-auto">
-        <div className="p-4 lg:p-6 space-y-4 lg:space-y-6">
+        <div className="p-4 lg:p-6 space-y-4 lg:space-y-6 pb-20 lg:pb-6">
           
           {/* Header com opções */}
           <div className="flex items-center justify-between">
