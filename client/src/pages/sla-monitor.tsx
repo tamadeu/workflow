@@ -224,15 +224,15 @@ export default function SLAMonitor() {
           </div>
 
           <Tabs defaultValue="overview" className="space-y-4 lg:space-y-6">
-            <TabsList className="w-full lg:w-auto">
-              <TabsTrigger value="overview">Visão Geral</TabsTrigger>
-              <TabsTrigger value="priorities">Por Prioridade</TabsTrigger>
-              <TabsTrigger value="critical">Chamados Críticos</TabsTrigger>
-              <TabsTrigger value="trends">Tendências</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-2 lg:grid-cols-4 lg:w-auto">
+              <TabsTrigger value="overview" className="text-xs lg:text-sm">Visão Geral</TabsTrigger>
+              <TabsTrigger value="priorities" className="text-xs lg:text-sm">Por Prioridade</TabsTrigger>
+              <TabsTrigger value="critical" className="text-xs lg:text-sm">Críticos</TabsTrigger>
+              <TabsTrigger value="trends" className="text-xs lg:text-sm">Tendências</TabsTrigger>
             </TabsList>
 
-            <TabsContent value="overview" className="space-y-6">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <TabsContent value="overview" className="space-y-4 lg:space-y-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
                 <Card className="shadow-sm border border-gray-200">
                   <CardHeader>
                     <CardTitle>Cumprimento por Prioridade</CardTitle>
@@ -307,8 +307,8 @@ export default function SLAMonitor() {
               </div>
             </TabsContent>
 
-            <TabsContent value="priorities" className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <TabsContent value="priorities" className="space-y-4 lg:space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
                 {Object.entries(slaTargets).map(([priority, data]) => {
                   const priorityLabel = {
                     critical: "Crítica",
@@ -346,35 +346,37 @@ export default function SLAMonitor() {
               </div>
             </TabsContent>
 
-            <TabsContent value="critical" className="space-y-6">
+            <TabsContent value="critical" className="space-y-4 lg:space-y-6">
               <Card className="shadow-sm border border-gray-200">
                 <CardHeader>
-                  <CardTitle>Chamados Críticos com SLA em Risco</CardTitle>
+                  <CardTitle className="text-base lg:text-lg">Chamados Críticos com SLA em Risco</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
                     {criticalTickets.map((ticket, index) => (
-                      <div key={index} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50">
+                      <div key={index} className="flex flex-col lg:flex-row lg:items-center lg:justify-between p-3 lg:p-4 border rounded-lg hover:bg-gray-50 space-y-3 lg:space-y-0">
                         <div className="flex-1">
-                          <div className="flex items-center space-x-3">
-                            <span data-testid={`critical-ticket-id-${index}`} className="font-mono font-medium">
+                          <div className="flex flex-col lg:flex-row lg:items-center space-y-2 lg:space-y-0 lg:space-x-3">
+                            <span data-testid={`critical-ticket-id-${index}`} className="font-mono font-medium text-sm lg:text-base">
                               {ticket.id}
                             </span>
-                            <Badge variant={ticket.risk === "high" ? "destructive" : "default"}>
+                            <Badge variant={ticket.risk === "high" ? "destructive" : "default"} className="w-fit">
                               {ticket.risk === "high" ? "Alto Risco" : 
                                ticket.risk === "medium" ? "Médio Risco" : "Baixo Risco"}
                             </Badge>
                           </div>
-                          <div className="text-gray-600 mt-1">{ticket.title}</div>
+                          <div className="text-gray-600 mt-1 text-sm lg:text-base">{ticket.title}</div>
                         </div>
-                        <div className="flex items-center space-x-6">
-                          <div className="text-right">
+                        
+                        <div className="flex flex-col lg:flex-row lg:items-center space-y-3 lg:space-y-0 lg:space-x-6">
+                          <div className="flex justify-between lg:block lg:text-right">
                             <div className="text-sm font-medium">Tempo restante</div>
                             <div className={`text-sm ${getRiskColor(ticket.risk)}`}>
                               {ticket.timeRemaining}
                             </div>
                           </div>
-                          <div className="w-32">
+                          
+                          <div className="w-full lg:w-32">
                             <div className="flex items-center justify-between text-xs mb-1">
                               <span>SLA</span>
                               <span>{ticket.progress}%</span>
@@ -386,7 +388,8 @@ export default function SLAMonitor() {
                               />
                             </div>
                           </div>
-                          <Button size="sm" variant="outline">
+                          
+                          <Button size="sm" variant="outline" className="w-full lg:w-auto">
                             Ver Detalhes
                           </Button>
                         </div>
@@ -397,7 +400,7 @@ export default function SLAMonitor() {
               </Card>
             </TabsContent>
 
-            <TabsContent value="trends" className="space-y-6">
+            <TabsContent value="trends" className="space-y-4 lg:space-y-6">
               <Card className="shadow-sm border border-gray-200">
                 <CardHeader>
                   <CardTitle>Tendência de Cumprimento SLA</CardTitle>
