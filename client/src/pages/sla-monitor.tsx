@@ -117,12 +117,12 @@ export default function SLAMonitor() {
       />
       
       <main className="flex-1 overflow-y-auto">
-        <div className="p-6">
+        <div className="p-4 lg:p-6 pb-20 lg:pb-6">
           {/* Controls */}
-          <div className="flex justify-between items-center mb-6">
-            <div className="flex items-center space-x-4">
+          <div className="flex flex-col space-y-4 lg:flex-row lg:justify-between lg:items-center lg:space-y-0 mb-6">
+            <div className="flex flex-col space-y-3 lg:flex-row lg:items-center lg:space-y-0 lg:space-x-4">
               <Select value={timeRange} onValueChange={setTimeRange}>
-                <SelectTrigger data-testid="select-time-range" className="w-48">
+                <SelectTrigger data-testid="select-time-range" className="w-full lg:w-48">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -132,7 +132,7 @@ export default function SLAMonitor() {
                 </SelectContent>
               </Select>
               <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-                <SelectTrigger data-testid="select-priority" className="w-48">
+                <SelectTrigger data-testid="select-priority" className="w-full lg:w-48">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -144,85 +144,87 @@ export default function SLAMonitor() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="flex space-x-2">
-              <Button data-testid="button-sla-alerts" variant="outline">
+            <div className="flex flex-col space-y-2 lg:flex-row lg:space-y-0 lg:space-x-2">
+              <Button data-testid="button-sla-alerts" variant="outline" className="w-full lg:w-auto">
                 <AlertTriangle className="w-4 h-4 mr-2" />
-                Configurar Alertas
+                <span className="hidden lg:inline">Configurar Alertas</span>
+                <span className="lg:hidden">Alertas</span>
               </Button>
-              <Button data-testid="button-export-sla" variant="outline">
-                Exportar Relatório
+              <Button data-testid="button-export-sla" variant="outline" className="w-full lg:w-auto">
+                <span className="hidden lg:inline">Exportar Relatório</span>
+                <span className="lg:hidden">Exportar</span>
               </Button>
             </div>
           </div>
 
           {/* SLA Overview */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 mb-6 lg:mb-8">
             <Card className="shadow-sm border border-gray-200">
-              <CardContent className="p-6">
+              <CardContent className="p-4 lg:p-6">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-gray-600">SLA Geral</p>
-                    <p data-testid="sla-overall" className="text-3xl font-bold text-gray-900">
+                    <p data-testid="sla-overall" className="text-2xl lg:text-3xl font-bold text-gray-900">
                       {slaMetrics.overall}%
                     </p>
-                    <p className="text-sm text-green-600 flex items-center mt-1">
+                    <p className="text-xs lg:text-sm text-green-600 flex items-center mt-1">
                       <TrendingUp className="w-3 h-3 mr-1" />
                       +2.1% vs mês anterior
                     </p>
                   </div>
-                  <Gauge className="w-12 h-12 text-primary" />
+                  <Gauge className="w-10 h-10 lg:w-12 lg:h-12 text-primary" />
                 </div>
               </CardContent>
             </Card>
 
             <Card className="shadow-sm border border-gray-200">
-              <CardContent className="p-6">
+              <CardContent className="p-4 lg:p-6">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-gray-600">Dentro do Prazo</p>
-                    <p data-testid="sla-on-time" className="text-3xl font-bold text-gray-900">
+                    <p data-testid="sla-on-time" className="text-2xl lg:text-3xl font-bold text-gray-900">
                       89%
                     </p>
-                    <p className="text-sm text-green-600">dos chamados</p>
+                    <p className="text-xs lg:text-sm text-green-600">dos chamados</p>
                   </div>
-                  <CheckCircle className="w-12 h-12 text-green-600" />
+                  <CheckCircle className="w-10 h-10 lg:w-12 lg:h-12 text-green-600" />
                 </div>
               </CardContent>
             </Card>
 
             <Card className="shadow-sm border border-gray-200">
-              <CardContent className="p-6">
+              <CardContent className="p-4 lg:p-6">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-gray-600">Violações SLA</p>
-                    <p data-testid="sla-violations" className="text-3xl font-bold text-red-600">
+                    <p data-testid="sla-violations" className="text-2xl lg:text-3xl font-bold text-red-600">
                       {slaMetrics.violations}
                     </p>
-                    <p className="text-sm text-gray-500">este mês</p>
+                    <p className="text-xs lg:text-sm text-gray-500">este mês</p>
                   </div>
-                  <AlertTriangle className="w-12 h-12 text-red-600" />
+                  <AlertTriangle className="w-10 h-10 lg:w-12 lg:h-12 text-red-600" />
                 </div>
               </CardContent>
             </Card>
 
             <Card className="shadow-sm border border-gray-200">
-              <CardContent className="p-6">
+              <CardContent className="p-4 lg:p-6">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-gray-600">Em Risco</p>
-                    <p data-testid="sla-at-risk" className="text-3xl font-bold text-yellow-600">
+                    <p data-testid="sla-at-risk" className="text-2xl lg:text-3xl font-bold text-yellow-600">
                       {slaMetrics.atRisk}
                     </p>
-                    <p className="text-sm text-gray-500">chamados ativos</p>
+                    <p className="text-xs lg:text-sm text-gray-500">chamados ativos</p>
                   </div>
-                  <Clock className="w-12 h-12 text-yellow-600" />
+                  <Clock className="w-10 h-10 lg:w-12 lg:h-12 text-yellow-600" />
                 </div>
               </CardContent>
             </Card>
           </div>
 
-          <Tabs defaultValue="overview" className="space-y-6">
-            <TabsList>
+          <Tabs defaultValue="overview" className="space-y-4 lg:space-y-6">
+            <TabsList className="w-full lg:w-auto">
               <TabsTrigger value="overview">Visão Geral</TabsTrigger>
               <TabsTrigger value="priorities">Por Prioridade</TabsTrigger>
               <TabsTrigger value="critical">Chamados Críticos</TabsTrigger>

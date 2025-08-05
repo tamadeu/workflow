@@ -130,11 +130,11 @@ function SidebarContent({ location, onItemClick, isMobile }: SidebarContentProps
             const isActive = location === item.href;
             return (
               <Link key={item.name} href={item.href}>
-                <a
+                <div
                   data-testid={`nav-${item.name.toLowerCase().replace(/\s+/g, '-')}`}
                   onClick={onItemClick}
                   className={cn(
-                    "nav-item flex items-center space-x-3 px-3 py-2 rounded-lg font-medium",
+                    "nav-item flex items-center space-x-3 px-3 py-2 rounded-lg font-medium cursor-pointer",
                     isActive
                       ? "active bg-primary-50 text-primary-700"
                       : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
@@ -142,7 +142,7 @@ function SidebarContent({ location, onItemClick, isMobile }: SidebarContentProps
                 >
                   <Icon className="w-5 h-5" />
                   <span>{item.name}</span>
-                </a>
+                </div>
               </Link>
             );
           })}
@@ -157,11 +157,11 @@ function SidebarContent({ location, onItemClick, isMobile }: SidebarContentProps
             const isActive = location === item.href;
             return (
               <Link key={item.name} href={item.href}>
-                <a
+                <div
                   data-testid={`nav-${item.name.toLowerCase().replace(/\s+/g, '-')}`}
                   onClick={onItemClick}
                   className={cn(
-                    "nav-item flex items-center space-x-3 px-3 py-2 rounded-lg",
+                    "nav-item flex items-center space-x-3 px-3 py-2 rounded-lg cursor-pointer",
                     isActive
                       ? "active bg-primary-50 text-primary-700 font-medium"
                       : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
@@ -169,7 +169,7 @@ function SidebarContent({ location, onItemClick, isMobile }: SidebarContentProps
                 >
                   <Icon className="w-5 h-5" />
                   <span>{item.name}</span>
-                </a>
+                </div>
               </Link>
             );
           })}
@@ -184,11 +184,11 @@ function SidebarContent({ location, onItemClick, isMobile }: SidebarContentProps
             const isActive = location === item.href;
             return (
               <Link key={item.name} href={item.href}>
-                <a
+                <div
                   data-testid={`nav-${item.name.toLowerCase().replace(/\s+/g, '-')}`}
                   onClick={onItemClick}
                   className={cn(
-                    "nav-item flex items-center space-x-3 px-3 py-2 rounded-lg",
+                    "nav-item flex items-center space-x-3 px-3 py-2 rounded-lg cursor-pointer",
                     isActive
                       ? "active bg-primary-50 text-primary-700 font-medium"
                       : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
@@ -196,7 +196,7 @@ function SidebarContent({ location, onItemClick, isMobile }: SidebarContentProps
                 >
                   <Icon className="w-5 h-5" />
                   <span>{item.name}</span>
-                </a>
+                </div>
               </Link>
             );
           })}
