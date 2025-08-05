@@ -64,12 +64,12 @@ export default function Analytics() {
       />
       
       <main className="flex-1 overflow-y-auto">
-        <div className="p-6">
+        <div className="p-3 lg:p-6">
           {/* Controls */}
-          <div className="flex justify-between items-center mb-6">
-            <div className="flex items-center space-x-4">
+          <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center space-y-4 lg:space-y-0 mb-4 lg:mb-6">
+            <div className="flex flex-col lg:flex-row space-y-3 lg:space-y-0 lg:space-x-4">
               <Select value={timeRange} onValueChange={setTimeRange}>
-                <SelectTrigger data-testid="select-time-range" className="w-48">
+                <SelectTrigger data-testid="select-time-range" className="w-full lg:w-48">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -81,7 +81,7 @@ export default function Analytics() {
                 </SelectContent>
               </Select>
               <Select value={selectedMetric} onValueChange={setSelectedMetric}>
-                <SelectTrigger data-testid="select-metric" className="w-48">
+                <SelectTrigger data-testid="select-metric" className="w-full lg:w-48">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -92,118 +92,118 @@ export default function Analytics() {
                 </SelectContent>
               </Select>
             </div>
-            <Button data-testid="button-export-analytics" variant="outline">
+            <Button data-testid="button-export-analytics" variant="outline" className="w-full lg:w-auto">
               <Download className="w-4 h-4 mr-2" />
-              Exportar Relatório
+              <span className="lg:inline">Exportar Relatório</span>
             </Button>
           </div>
 
-          <Tabs defaultValue="overview" className="space-y-6">
-            <TabsList>
-              <TabsTrigger value="overview">Visão Geral</TabsTrigger>
-              <TabsTrigger value="performance">Performance</TabsTrigger>
-              <TabsTrigger value="trends">Tendências</TabsTrigger>
-              <TabsTrigger value="teams">Equipes</TabsTrigger>
+          <Tabs defaultValue="overview" className="space-y-4 lg:space-y-6">
+            <TabsList className="grid w-full grid-cols-2 lg:grid-cols-4 lg:w-auto">
+              <TabsTrigger value="overview" className="text-xs lg:text-sm">Visão Geral</TabsTrigger>
+              <TabsTrigger value="performance" className="text-xs lg:text-sm">Performance</TabsTrigger>
+              <TabsTrigger value="trends" className="text-xs lg:text-sm">Tendências</TabsTrigger>
+              <TabsTrigger value="teams" className="text-xs lg:text-sm">Equipes</TabsTrigger>
             </TabsList>
 
-            <TabsContent value="overview" className="space-y-6">
+            <TabsContent value="overview" className="space-y-4 lg:space-y-6">
               {/* KPIs */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-6">
                 <Card className="shadow-sm border border-gray-200">
-                  <CardContent className="p-6">
+                  <CardContent className="p-4 lg:p-6">
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm font-medium text-gray-600">Volume Total</p>
-                        <p data-testid="metric-total-volume" className="text-3xl font-bold text-gray-900">
+                        <p data-testid="metric-total-volume" className="text-2xl lg:text-3xl font-bold text-gray-900">
                           1,247
                         </p>
-                        <p className="text-sm text-green-600 flex items-center mt-1">
+                        <p className="text-xs lg:text-sm text-green-600 flex items-center mt-1">
                           <TrendingUp className="w-3 h-3 mr-1" />
                           +8.2% vs período anterior
                         </p>
                       </div>
-                      <BarChart3 className="w-12 h-12 text-blue-600" />
+                      <BarChart3 className="w-10 h-10 lg:w-12 lg:h-12 text-blue-600" />
                     </div>
                   </CardContent>
                 </Card>
 
                 <Card className="shadow-sm border border-gray-200">
-                  <CardContent className="p-6">
+                  <CardContent className="p-4 lg:p-6">
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm font-medium text-gray-600">Taxa de Resolução</p>
-                        <p data-testid="metric-resolution-rate" className="text-3xl font-bold text-gray-900">
+                        <p data-testid="metric-resolution-rate" className="text-2xl lg:text-3xl font-bold text-gray-900">
                           94.2%
                         </p>
-                        <p className="text-sm text-green-600 flex items-center mt-1">
+                        <p className="text-xs lg:text-sm text-green-600 flex items-center mt-1">
                           <TrendingUp className="w-3 h-3 mr-1" />
                           +2.1% vs período anterior
                         </p>
                       </div>
-                      <Users className="w-12 h-12 text-green-600" />
+                      <Users className="w-10 h-10 lg:w-12 lg:h-12 text-green-600" />
                     </div>
                   </CardContent>
                 </Card>
 
                 <Card className="shadow-sm border border-gray-200">
-                  <CardContent className="p-6">
+                  <CardContent className="p-4 lg:p-6">
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm font-medium text-gray-600">Tempo Médio</p>
-                        <p data-testid="metric-avg-time" className="text-3xl font-bold text-gray-900">
+                        <p data-testid="metric-avg-time" className="text-2xl lg:text-3xl font-bold text-gray-900">
                           2h 24m
                         </p>
-                        <p className="text-sm text-red-600 flex items-center mt-1">
+                        <p className="text-xs lg:text-sm text-red-600 flex items-center mt-1">
                           <TrendingUp className="w-3 h-3 mr-1 rotate-180" />
                           -12min vs período anterior
                         </p>
                       </div>
-                      <Clock className="w-12 h-12 text-orange-600" />
+                      <Clock className="w-10 h-10 lg:w-12 lg:h-12 text-orange-600" />
                     </div>
                   </CardContent>
                 </Card>
 
                 <Card className="shadow-sm border border-gray-200">
-                  <CardContent className="p-6">
+                  <CardContent className="p-4 lg:p-6">
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm font-medium text-gray-600">Satisfação</p>
-                        <p data-testid="metric-satisfaction" className="text-3xl font-bold text-gray-900">
+                        <p data-testid="metric-satisfaction" className="text-2xl lg:text-3xl font-bold text-gray-900">
                           4.7/5
                         </p>
-                        <p className="text-sm text-green-600 flex items-center mt-1">
+                        <p className="text-xs lg:text-sm text-green-600 flex items-center mt-1">
                           <TrendingUp className="w-3 h-3 mr-1" />
                           +0.3 vs período anterior
                         </p>
                       </div>
-                      <Calendar className="w-12 h-12 text-purple-600" />
+                      <Calendar className="w-10 h-10 lg:w-12 lg:h-12 text-purple-600" />
                     </div>
                   </CardContent>
                 </Card>
               </div>
 
               {/* Priority Distribution */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
                 <Card className="shadow-sm border border-gray-200">
-                  <CardHeader>
-                    <CardTitle>Distribuição por Prioridade</CardTitle>
+                  <CardHeader className="pb-3 lg:pb-6">
+                    <CardTitle className="text-base lg:text-lg">Distribuição por Prioridade</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-4">
+                    <div className="space-y-3 lg:space-y-4">
                       {priorityDistribution.map((item) => (
                         <div key={item.priority} className="flex items-center justify-between">
-                          <div className="flex items-center space-x-3">
+                          <div className="flex items-center space-x-2 lg:space-x-3">
                             <div className="w-3 h-3 rounded-full bg-blue-500"></div>
                             <span className="text-sm font-medium">{item.priority}</span>
                           </div>
-                          <div className="flex items-center space-x-3">
-                            <div className="w-32">
+                          <div className="flex items-center space-x-2 lg:space-x-3">
+                            <div className="w-20 lg:w-32">
                               <Progress value={item.percentage} className="h-2" />
                             </div>
-                            <span data-testid={`priority-${item.priority.toLowerCase()}-count`} className="text-sm font-medium w-12 text-right">
+                            <span data-testid={`priority-${item.priority.toLowerCase()}-count`} className="text-xs lg:text-sm font-medium w-8 lg:w-12 text-right">
                               {item.count}
                             </span>
-                            <span className="text-sm text-gray-500 w-12 text-right">
+                            <span className="text-xs lg:text-sm text-gray-500 w-8 lg:w-12 text-right">
                               {item.percentage}%
                             </span>
                           </div>
@@ -214,20 +214,20 @@ export default function Analytics() {
                 </Card>
 
                 <Card className="shadow-sm border border-gray-200">
-                  <CardHeader>
-                    <CardTitle>Performance por Período</CardTitle>
+                  <CardHeader className="pb-3 lg:pb-6">
+                    <CardTitle className="text-base lg:text-lg">Performance por Período</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-4">
+                    <div className="space-y-3 lg:space-y-4">
                       {performanceData.slice(-4).map((item, index) => (
                         <div key={item.period} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                           <div>
-                            <div className="font-medium">{item.period}</div>
-                            <div className="text-sm text-gray-500">{item.tickets} chamados</div>
+                            <div className="text-sm lg:text-base font-medium">{item.period}</div>
+                            <div className="text-xs lg:text-sm text-gray-500">{item.tickets} chamados</div>
                           </div>
                           <div className="text-right">
-                            <div className="text-sm font-medium">{item.resolved} resolvidos</div>
-                            <div className={`text-sm ${getSLAColor(item.sla)}`}>
+                            <div className="text-xs lg:text-sm font-medium">{item.resolved} resolvidos</div>
+                            <div className={`text-xs lg:text-sm ${getSLAColor(item.sla)}`}>
                               SLA: {item.sla}%
                             </div>
                           </div>
@@ -239,36 +239,36 @@ export default function Analytics() {
               </div>
             </TabsContent>
 
-            <TabsContent value="performance" className="space-y-6">
+            <TabsContent value="performance" className="space-y-4 lg:space-y-6">
               <Card className="shadow-sm border border-gray-200">
-                <CardHeader>
-                  <CardTitle>Performance por Fila de Atendimento</CardTitle>
+                <CardHeader className="pb-3 lg:pb-6">
+                  <CardTitle className="text-base lg:text-lg">Performance por Fila de Atendimento</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="overflow-x-auto">
-                    <table className="w-full">
+                    <table className="w-full min-w-[700px]">
                       <thead>
                         <tr className="border-b">
-                          <th className="text-left py-3 px-4 font-medium">Fila</th>
-                          <th className="text-left py-3 px-4 font-medium">Chamados</th>
-                          <th className="text-left py-3 px-4 font-medium">Tempo Médio</th>
-                          <th className="text-left py-3 px-4 font-medium">SLA</th>
-                          <th className="text-left py-3 px-4 font-medium">Performance</th>
+                          <th className="text-left py-2 lg:py-3 px-2 lg:px-4 font-medium text-sm lg:text-base">Fila</th>
+                          <th className="text-left py-2 lg:py-3 px-2 lg:px-4 font-medium text-sm lg:text-base">Chamados</th>
+                          <th className="text-left py-2 lg:py-3 px-2 lg:px-4 font-medium text-sm lg:text-base">Tempo Médio</th>
+                          <th className="text-left py-2 lg:py-3 px-2 lg:px-4 font-medium text-sm lg:text-base">SLA</th>
+                          <th className="text-left py-2 lg:py-3 px-2 lg:px-4 font-medium text-sm lg:text-base">Performance</th>
                         </tr>
                       </thead>
                       <tbody>
                         {queuePerformance.map((queue, index) => (
                           <tr key={index} className="border-b hover:bg-gray-50">
-                            <td className="py-3 px-4 font-medium">{queue.queue}</td>
-                            <td data-testid={`queue-tickets-${index}`} className="py-3 px-4">
+                            <td className="py-2 lg:py-3 px-2 lg:px-4 font-medium text-sm lg:text-base">{queue.queue}</td>
+                            <td data-testid={`queue-tickets-${index}`} className="py-2 lg:py-3 px-2 lg:px-4 text-sm lg:text-base">
                               {queue.tickets}
                             </td>
-                            <td className="py-3 px-4">{queue.avgTime}</td>
-                            <td className={`py-3 px-4 font-medium ${getSLAColor(queue.sla)}`}>
+                            <td className="py-2 lg:py-3 px-2 lg:px-4 text-sm lg:text-base">{queue.avgTime}</td>
+                            <td className={`py-2 lg:py-3 px-2 lg:px-4 font-medium text-sm lg:text-base ${getSLAColor(queue.sla)}`}>
                               {queue.sla}%
                             </td>
-                            <td className="py-3 px-4">
-                              <Progress value={queue.sla} className="w-24" />
+                            <td className="py-2 lg:py-3 px-2 lg:px-4">
+                              <Progress value={queue.sla} className="w-16 lg:w-24" />
                             </td>
                           </tr>
                         ))}
@@ -279,7 +279,7 @@ export default function Analytics() {
               </Card>
             </TabsContent>
 
-            <TabsContent value="trends" className="space-y-6">
+            <TabsContent value="trends" className="space-y-4 lg:space-y-6">
               <Card className="shadow-sm border border-gray-200">
                 <CardHeader>
                   <CardTitle>Tendências Históricas</CardTitle>
@@ -328,7 +328,7 @@ export default function Analytics() {
               </div>
             </TabsContent>
 
-            <TabsContent value="teams" className="space-y-6">
+            <TabsContent value="teams" className="space-y-4 lg:space-y-6">
               <Card className="shadow-sm border border-gray-200">
                 <CardHeader>
                   <CardTitle>Performance por Equipe</CardTitle>
