@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
-import { Home, Ticket, Users, Plus, Menu } from "lucide-react";
+import { Home, Ticket, BarChart3, Plus, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -32,10 +32,10 @@ export default function BottomMenu({ onMenuToggle }: BottomMenuProps) {
       isCenter: true
     },
     {
-      name: "Clientes",
-      href: "/clients",
-      icon: Users,
-      testId: "bottom-nav-clients"
+      name: "Analytics",
+      href: "/analytics",
+      icon: BarChart3,
+      testId: "bottom-nav-analytics"
     },
     {
       name: "Menu",

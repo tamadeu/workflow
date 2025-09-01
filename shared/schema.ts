@@ -10,8 +10,46 @@ export const users = pgTable("users", {
   password: text("password").notNull(),
   role: text("role").notNull().default("user"),
   name: text("name").notNull(),
+  last_name: text("last_name"),
   avatar: text("avatar"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const slaLevels = pgTable("sla_levels", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull().unique(),
+  sla: integer("sla").notNull().default(480), // SLA em minutos
+  isActive: boolean("is_active").notNull().default(true),
+  createdBy: varchar("created_by").references(() => users.id),
+  updatedBy: varchar("updated_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const departments = pgTable("departments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull().unique(),
+  slaLevelId: varchar("sla_level_id").references(() => slaLevels.id), // Referência ao nível SLA
+  workHourId: varchar("work_hour_id").references(() => workSchedules.id), // Referência à jornada de trabalho
+  isActive: boolean("is_active").notNull().default(true),
+  createdBy: varchar("created_by").references(() => users.id),
+  updatedBy: varchar("updated_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const requestTypes = pgTable("request_types", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull().unique(),
+  description: text("description"),
+  color: text("color").notNull().default("#3B82F6"),
+  isActive: boolean("is_active").notNull().default(true),
+  departmentIds: jsonb("department_ids").$type<string[]>().default([]), // Array de IDs de departamentos
+  sla: integer("sla").notNull().default(8), // SLA específico do tipo de solicitação
+  createdBy: varchar("created_by").references(() => users.id),
+  updatedBy: varchar("updated_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 export const queues = pgTable("queues", {
@@ -20,6 +58,8 @@ export const queues = pgTable("queues", {
   description: text("description"),
   color: text("color").notNull().default("#3B82F6"),
   isActive: boolean("is_active").notNull().default(true),
+  departmentId: varchar("department_id").references(() => departments.id),
+  requestTypeId: varchar("request_type_id").references(() => requestTypes.id),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -28,7 +68,35 @@ export const labels = pgTable("labels", {
   name: text("name").notNull().unique(),
   color: text("color").notNull().default("#3B82F6"),
   description: text("description"),
+  isActive: boolean("is_active").notNull().default(true),
+  createdBy: varchar("created_by").references(() => users.id),
+  updatedBy: varchar("updated_by").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const ticketStatuses = pgTable("ticket_statuses", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull().unique(),
+  color: text("color").notNull().default("#3B82F6"),
+  description: text("description"),
+  isActive: boolean("is_active").notNull().default(true),
+  createdBy: varchar("created_by").references(() => users.id),
+  updatedBy: varchar("updated_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const ticketPriorities = pgTable("ticket_priorities", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull().unique(),
+  color: text("color").notNull().default("#3B82F6"),
+  description: text("description"),
+  isActive: boolean("is_active").notNull().default(true),
+  createdBy: varchar("created_by").references(() => users.id),
+  updatedBy: varchar("updated_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 export const ticketTypes = pgTable("ticket_types", {
@@ -47,8 +115,9 @@ export const tickets: any = pgTable("tickets", {
   description: text("description").notNull(),
   status: text("status").notNull().default("open"),
   priority: text("priority").notNull().default("medium"),
-  typeId: varchar("type_id").references(() => ticketTypes.id),
+  typeId: varchar("type_id").references(() => requestTypes.id),
   queueId: varchar("queue_id").references(() => queues.id),
+  departmentId: varchar("department_id").references(() => departments.id),
   requesterId: varchar("requester_id").references(() => users.id).notNull(),
   assigneeId: varchar("assignee_id").references(() => users.id),
   parentId: varchar("parent_id").references(() => tickets.id),
@@ -96,6 +165,18 @@ export const insertUserSchema = createInsertSchema(users).omit({
   createdAt: true,
 });
 
+export const insertDepartmentSchema = createInsertSchema(departments).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertRequestTypeSchema = createInsertSchema(requestTypes).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export const insertQueueSchema = createInsertSchema(queues).omit({
   id: true,
   createdAt: true,
@@ -104,6 +185,19 @@ export const insertQueueSchema = createInsertSchema(queues).omit({
 export const insertLabelSchema = createInsertSchema(labels).omit({
   id: true,
   createdAt: true,
+  updatedAt: true,
+});
+
+export const insertTicketStatusSchema = createInsertSchema(ticketStatuses).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertTicketPrioritySchema = createInsertSchema(ticketPriorities).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
 });
 
 export const insertTicketTypeSchema = createInsertSchema(ticketTypes).omit({
@@ -128,15 +222,29 @@ export const insertWorkScheduleSchema = createInsertSchema(workSchedules).omit({
   createdAt: true,
 });
 
+export const insertSlaLevelSchema = createInsertSchema(slaLevels).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 
 
 // Types
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
+export type Department = typeof departments.$inferSelect;
+export type InsertDepartment = z.infer<typeof insertDepartmentSchema>;
+export type RequestType = typeof requestTypes.$inferSelect;
+export type InsertRequestType = z.infer<typeof insertRequestTypeSchema>;
 export type Queue = typeof queues.$inferSelect;
 export type InsertQueue = z.infer<typeof insertQueueSchema>;
 export type Label = typeof labels.$inferSelect;
 export type InsertLabel = z.infer<typeof insertLabelSchema>;
+export type TicketStatus = typeof ticketStatuses.$inferSelect;
+export type InsertTicketStatus = z.infer<typeof insertTicketStatusSchema>;
+export type TicketPriority = typeof ticketPriorities.$inferSelect;
+export type InsertTicketPriority = z.infer<typeof insertTicketPrioritySchema>;
 export type TicketType = typeof ticketTypes.$inferSelect;
 export type InsertTicketType = z.infer<typeof insertTicketTypeSchema>;
 export type Ticket = typeof tickets.$inferSelect;
@@ -145,4 +253,6 @@ export type TicketComment = typeof ticketComments.$inferSelect;
 export type InsertTicketComment = z.infer<typeof insertTicketCommentSchema>;
 export type WorkSchedule = typeof workSchedules.$inferSelect;
 export type InsertWorkSchedule = z.infer<typeof insertWorkScheduleSchema>;
+export type SlaLevel = typeof slaLevels.$inferSelect;
+export type InsertSlaLevel = z.infer<typeof insertSlaLevelSchema>;
 

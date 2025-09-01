@@ -1,15 +1,21 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
-import { Eye, Check, X, Filter, Download, ChevronLeft, ChevronRight } from "lucide-react";
+import { Eye, Check, X, Filter, Download, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
 import AdvancedFilter from "./advanced-filter";
 import MobileTicketCard from "./mobile-ticket-card";
-import type { Ticket, Queue, Label } from "@shared/schema";
+import SLAIndicator from "./sla-indicator";
+import { 
+  useTicketsQuery, 
+  useUpdateTicketStatus,
+  useAssignTicket 
+} from "@/hooks/use-tickets-api";
+import type { LocalTicket } from "@/lib/tickets-api";
 import type { TicketFilters } from "@/lib/types";
 
 export default function TicketsTable() {
@@ -18,88 +24,78 @@ export default function TicketsTable() {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(5);
   const isMobile = useIsMobile();
+  const { toast } = useToast();
 
-  const { data: tickets = [], isLoading } = useQuery<Ticket[]>({
-    queryKey: ["/api/tickets"],
-  });
+  // Usar a nova API de tickets
+  const { data: tickets = [], isLoading, error } = useTicketsQuery();
+  const updateStatusMutation = useUpdateTicketStatus();
+  const assignTicketMutation = useAssignTicket();
 
-  const { data: queues = [] } = useQuery<Queue[]>({
-    queryKey: ["/api/queues"],
-  });
-
-  const { data: labels = [] } = useQuery<Label[]>({
-    queryKey: ["/api/labels"],
-  });
-
-  const getPriorityVariant = (priority: string) => {
-    switch (priority) {
-      case "critical":
+  const getPriorityVariant = (priorityName: string) => {
+    switch (priorityName.toLowerCase()) {
+      case "crítica":
         return "destructive";
-      case "high":
+      case "alta":
         return "destructive";
-      case "medium":
+      case "média":
         return "default";
-      case "low":
+      case "baixa":
         return "secondary";
       default:
         return "default";
     }
   };
 
-  const getStatusVariant = (status: string) => {
-    switch (status) {
-      case "open":
+  const getStatusVariant = (statusName: string) => {
+    switch (statusName.toLowerCase()) {
+      case "aberto":
         return "default";
-      case "in_progress":
+      case "em andamento":
         return "default";
-      case "resolved":
+      case "resolvido":
         return "secondary";
-      case "closed":
+      case "fechado":
         return "outline";
+      case "pendente":
+        return "default";
       default:
         return "default";
     }
   };
 
-  const getPriorityLabel = (priority: string) => {
-    switch (priority) {
-      case "critical":
-        return "Crítica";
-      case "high":
-        return "Alta";
-      case "medium":
-        return "Média";
-      case "low":
-        return "Baixa";
-      default:
-        return priority;
+  const getPriorityLabel = (priorityName: string) => {
+    return priorityName; // A API já retorna os nomes em português
+  };
+
+  const getStatusLabel = (statusName: string) => {
+    return statusName; // A API já retorna os nomes em português
+  };
+
+  const getResponsibleUserName = (ticket: LocalTicket) => {
+    if (ticket.responsibleUser) {
+      return ticket.responsibleUser.name;
     }
+    return "Não atribuído";
   };
 
-  const getStatusLabel = (status: string) => {
-    switch (status) {
-      case "open":
-        return "Aberto";
-      case "in_progress":
-        return "Em Andamento";
-      case "resolved":
-        return "Resolvido";
-      case "closed":
-        return "Fechado";
-      default:
-        return status;
+  const formatTicketCode = (code: string) => {
+    return `TKT-${code}`;
+  };
+
+  const handleStatusUpdate = async (ticketId: string, newStatusId: string) => {
+    try {
+      await updateStatusMutation.mutateAsync({ id: ticketId, statusId: newStatusId });
+      toast({
+        title: "Status atualizado",
+        description: "O status do ticket foi atualizado com sucesso.",
+      });
+    } catch (error) {
+      toast({
+        title: "Erro ao atualizar status",
+        description: "Ocorreu um erro ao atualizar o status do ticket.",
+        variant: "destructive",
+      });
     }
-  };
-
-  const getQueueName = (queueId?: string) => {
-    if (!queueId) return "N/A";
-    const queue = queues.find(q => q.id === queueId);
-    return queue?.name || "N/A";
-  };
-
-  const getSLAProgress = () => {
-    // Mock SLA calculation
-    return Math.floor(Math.random() * 100);
   };
 
   // Pagination logic
@@ -116,13 +112,26 @@ export default function TicketsTable() {
   if (isLoading) {
     return (
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-        <div className="animate-pulse space-y-4">
-          <div className="h-4 bg-gray-200 rounded w-1/4"></div>
-          <div className="space-y-2">
-            {[...Array(5)].map((_, i) => (
-              <div key={i} className="h-12 bg-gray-200 rounded"></div>
-            ))}
-          </div>
+        <div className="flex items-center justify-center space-x-2 py-8">
+          <Loader2 className="w-6 h-6 animate-spin" />
+          <span>Carregando tickets...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <div className="text-center py-8">
+          <p className="text-red-600">Erro ao carregar tickets: {error.message}</p>
+          <Button 
+            variant="outline" 
+            className="mt-4"
+            onClick={() => window.location.reload()}
+          >
+            Tentar novamente
+          </Button>
         </div>
       </div>
     );
@@ -136,8 +145,8 @@ export default function TicketsTable() {
             /* Mobile Header - Compact */
             <div className="space-y-3">
               <div>
-                <h3 className="text-base font-semibold text-gray-900">Chamados Recentes</h3>
-                <p className="text-xs text-gray-500">Últimos chamados abertos no sistema</p>
+                <h3 className="text-base font-semibold text-gray-900">Chamados da API</h3>
+                <p className="text-xs text-gray-500">Chamados carregados da API externa</p>
               </div>
               <div className="flex items-center justify-between">
                 <Button
@@ -165,8 +174,10 @@ export default function TicketsTable() {
             /* Desktop Header */
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-lg font-semibold text-gray-900">Chamados Recentes</h3>
-                <p className="text-sm text-gray-500">Últimos chamados abertos no sistema</p>
+                <h3 className="text-lg font-semibold text-gray-900">Chamados da API</h3>
+                <p className="text-sm text-gray-500">
+                  {totalItems} chamados carregados da API externa
+                </p>
               </div>
               <div className="flex items-center space-x-3">
                 <Button
@@ -198,10 +209,10 @@ export default function TicketsTable() {
               <MobileTicketCard
                 key={ticket.id}
                 ticket={ticket}
-                getPriorityLabel={getPriorityLabel}
-                getPriorityVariant={getPriorityVariant}
-                getStatusLabel={getStatusLabel}
-                getStatusVariant={getStatusVariant}
+                getPriorityLabel={(name: string) => getPriorityLabel(name)}
+                getPriorityVariant={(name: string) => getPriorityVariant(name)}
+                getStatusLabel={(name: string) => getStatusLabel(name)}
+                getStatusVariant={(name: string) => getStatusVariant(name)}
               />
             ))}
           </div>
@@ -211,77 +222,81 @@ export default function TicketsTable() {
             <Table>
             <TableHeader>
               <TableRow className="bg-gray-50">
-                <TableHead>ID</TableHead>
+                <TableHead>Código</TableHead>
                 <TableHead>Título</TableHead>
-                <TableHead>Solicitante</TableHead>
+                <TableHead>Tipo de Solicitação</TableHead>
+                <TableHead>Responsável</TableHead>
                 <TableHead>Prioridade</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Fila</TableHead>
                 <TableHead>SLA</TableHead>
                 <TableHead>Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {paginatedTickets.map((ticket) => {
-                const slaProgress = getSLAProgress();
                 return (
                   <TableRow key={ticket.id} className="hover:bg-gray-50">
                     <TableCell className="font-medium">
-                      <span data-testid={`ticket-id-${ticket.number}`}>
-                        #{ticket.number}
+                      <span data-testid={`ticket-code-${ticket.id}`}>
+                        {formatTicketCode(ticket.code)}
                       </span>
                     </TableCell>
                     <TableCell>
                       <div className="min-w-0">
                         <div 
-                          data-testid={`ticket-title-${ticket.number}`}
+                          data-testid={`ticket-title-${ticket.id}`}
                           className="text-sm font-medium text-gray-900 truncate"
                         >
                           {ticket.title}
                         </div>
-                        <div className="flex space-x-1 mt-1">
-                          <Badge variant="outline" className="text-xs">
-                            exemplo
-                          </Badge>
-                        </div>
                       </div>
                     </TableCell>
-                    <TableCell className="text-sm text-gray-500">
-                      Usuário #{ticket.requesterId.slice(0, 8)}
-                    </TableCell>
                     <TableCell>
-                      <Badge variant={getPriorityVariant(ticket.priority)}>
-                        {getPriorityLabel(ticket.priority)}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={getStatusVariant(ticket.status)}>
-                        {getStatusLabel(ticket.status)}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-sm text-gray-500">
-                      {getQueueName(ticket.queueId || "")}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center">
-                        <Progress value={slaProgress} className="w-16 h-2 mr-2" />
-                        <span 
-                          data-testid={`sla-progress-${ticket.number}`}
-                          className={`text-xs ${
-                            slaProgress > 80 ? 'text-red-600' : 
-                            slaProgress > 60 ? 'text-yellow-600' : 
-                            'text-green-600'
-                          }`}
-                        >
-                          {slaProgress}%
+                      <div className="flex items-center space-x-2">
+                        <div 
+                          className="w-3 h-3 rounded-full" 
+                          style={{ backgroundColor: ticket.requestType.color }}
+                        />
+                        <span className="text-sm text-gray-900">
+                          {ticket.requestType.name}
                         </span>
                       </div>
+                    </TableCell>
+                    <TableCell className="text-sm text-gray-500">
+                      {getResponsibleUserName(ticket)}
+                    </TableCell>
+                    <TableCell>
+                      <Badge 
+                        variant={getPriorityVariant(ticket.priority.name)}
+                        style={{ 
+                          backgroundColor: ticket.priority.color + '20',
+                          color: ticket.priority.color,
+                          borderColor: ticket.priority.color + '40'
+                        }}
+                      >
+                        {getPriorityLabel(ticket.priority.name)}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge 
+                        variant={getStatusVariant(ticket.status.name)}
+                        style={{ 
+                          backgroundColor: ticket.status.color + '20',
+                          color: ticket.status.color,
+                          borderColor: ticket.status.color + '40'
+                        }}
+                      >
+                        {getStatusLabel(ticket.status.name)}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <SLAIndicator ticket={ticket} variant="table" />
                     </TableCell>
                     <TableCell>
                       <div className="flex space-x-2">
                         <Link href={`/ticket/${ticket.id}`}>
                           <Button
-                            data-testid={`button-view-${ticket.number}`}
+                            data-testid={`button-view-${ticket.id}`}
                             variant="ghost"
                             size="sm"
                             className="text-primary hover:text-primary-700"
@@ -289,19 +304,29 @@ export default function TicketsTable() {
                             <Eye className="w-4 h-4" />
                           </Button>
                         </Link>
+                        {ticket.status.name.toLowerCase() !== "resolvido" && (
+                          <Button
+                            data-testid={`button-approve-${ticket.id}`}
+                            variant="ghost"
+                            size="sm"
+                            className="text-green-600 hover:text-green-700"
+                            onClick={() => handleStatusUpdate(ticket.id, "resolved-status-id")}
+                            disabled={updateStatusMutation.isPending}
+                          >
+                            {updateStatusMutation.isPending ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <Check className="w-4 h-4" />
+                            )}
+                          </Button>
+                        )}
                         <Button
-                          data-testid={`button-approve-${ticket.number}`}
-                          variant="ghost"
-                          size="sm"
-                          className="text-green-600 hover:text-green-700"
-                        >
-                          <Check className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          data-testid={`button-reject-${ticket.number}`}
+                          data-testid={`button-reject-${ticket.id}`}
                           variant="ghost"
                           size="sm"
                           className="text-red-600 hover:text-red-700"
+                          onClick={() => handleStatusUpdate(ticket.id, "rejected-status-id")}
+                          disabled={updateStatusMutation.isPending}
                         >
                           <X className="w-4 h-4" />
                         </Button>

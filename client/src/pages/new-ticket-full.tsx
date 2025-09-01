@@ -1,484 +1,647 @@
-import { useState, useRef } from "react";
+import Header from "@/components/layout/header";
+import { useState, useRef, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Link, useLocation } from "wouter";
-import { ArrowLeft, Send, Paperclip, X, FileText, Image, Zap, Upload } from "lucide-react";
-import ReactQuill from "react-quill";
-import "react-quill/dist/quill.snow.css";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
-import Header from "@/components/layout/header";
+import { useAuth } from "@/hooks/use-auth";
+import { ChevronLeft, ChevronRight, X, FileText, Upload, ArrowLeft } from "lucide-react";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { requestTypesApi } from "@/lib/request-types-api";
+import { departmentsApi } from "@/lib/departments-api";
+import { ticketsApi } from "@/lib/tickets-api";
+import { useTicketPrioritiesQuery } from "@/hooks/use-ticket-priority";
+import { useTicketStatusesQuery } from "@/hooks/use-ticket-status";
 
-const fullTicketSchema = z.object({
-  title: z.string().min(5, "Título deve ter pelo menos 5 caracteres"),
-  description: z.string().min(10, "Descrição deve ter pelo menos 10 caracteres"),
-  priority: z.enum(["baixa", "normal", "alta", "urgente"]),
-  queueId: z.string().min(1, "Selecione uma fila"),
-  typeId: z.string().min(1, "Selecione um tipo"),
-  clientEmail: z.string().email("Email inválido").optional().or(z.literal("")),
-  tags: z.array(z.string()).default([]),
-  estimatedHours: z.number().min(0).optional(),
-  dueDate: z.string().optional(),
-});
-
-type FullTicketFormData = z.infer<typeof fullTicketSchema>;
-
+// Interface para arquivos anexados
 interface AttachedFile {
   id: string;
   name: string;
   size: number;
   type: string;
-  file: File;
+  content?: string;
 }
+
+// Schema para Step 1 - Apenas Tipo de Solicitação
+const step1Schema = z.object({
+  request_type_id: z.string().min(1, "Tipo de solicitação é obrigatório"),
+});
+
+// Schema para Step 2 - Informações Completas
+const step2Schema = z.object({
+  request_type_id: z.string().min(1, "Tipo de solicitação é obrigatório"),
+  title: z.string().min(1, "Título é obrigatório"),
+  department_id: z.string().min(1, "Departamento é obrigatório"),
+  priority_id: z.string().min(1, "Prioridade é obrigatória"),
+  description: z.string().min(1, "Descrição é obrigatória"),
+});
+
+type Step1FormData = z.infer<typeof step1Schema>;
+type Step2FormData = z.infer<typeof step2Schema>;
 
 export default function NewTicketFull() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [attachments, setAttachments] = useState<AttachedFile[]>([]);
-  const [currentTag, setCurrentTag] = useState("");
+  const [requestTypeSearch, setRequestTypeSearch] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const form = useForm<FullTicketFormData>({
-    resolver: zodResolver(fullTicketSchema),
+  const { getAuthToken } = useAuth();
+
+  // Simular usuário atual - em produção viria do contexto de auth
+  const currentUser = {
+    id: "user-1",
+    name: "Usuário Atual",
+    email: "usuario@empresa.com"
+  };
+
+  // Query para tipos de solicitação
+  const { data: requestTypes = [], isLoading: requestTypesLoading } = useQuery({
+    queryKey: ['request-types'],
+    queryFn: requestTypesApi.getAll,
+  });
+
+  // Query para departamentos
+  const { data: departments = [], isLoading: departmentsLoading } = useQuery({
+    queryKey: ['departments'],
+    queryFn: departmentsApi.getAll,
+  });
+
+  // Query para prioridades
+  const { data: priorities = [], isLoading: prioritiesLoading } = useTicketPrioritiesQuery();
+
+  // Query para status - buscar o status padrão para novos tickets
+  const { data: statuses = [], isLoading: statusesLoading } = useTicketStatusesQuery();
+
+  // Forms para cada step
+  const step1Form = useForm<Step1FormData>({
+    resolver: zodResolver(step1Schema),
     defaultValues: {
-      title: "",
-      description: "",
-      priority: "normal",
-      queueId: "",
-      typeId: "",
-      clientEmail: "",
-      tags: [],
-      estimatedHours: undefined,
-      dueDate: "",
+      request_type_id: "",
     },
   });
 
-  const quillModules = {
-    toolbar: [
-      [{ 'header': [1, 2, 3, false] }],
-      ['bold', 'italic', 'underline', 'strike'],
-      [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-      [{ 'color': [] }, { 'background': [] }],
-      ['link', 'image'],
-      ['clean']
-    ],
+  const step2Form = useForm<Step2FormData>({
+    resolver: zodResolver(step2Schema),
+    defaultValues: {
+      request_type_id: "",
+      title: "",
+      department_id: "",
+      priority_id: "",
+      description: "",
+    },
+  });
+
+  // Mutation para criar ticket
+  const createTicketMutation = useMutation({
+    mutationFn: async (data: Step2FormData) => {
+      // Buscar o status padrão para novos tickets (primeiro ativo encontrado ou um específico)
+      const defaultStatus = statuses.find(s => s.isActive && (s.name.toLowerCase().includes('aberto') || s.name.toLowerCase().includes('open') || s.name.toLowerCase().includes('novo'))) 
+        || statuses.find(s => s.isActive);
+      
+      if (!defaultStatus) {
+        throw new Error('Nenhum status ativo encontrado para criar o ticket');
+      }
+
+      // Buscar dados adicionais necessários
+      const priority = priorities.find(p => p.id === data.priority_id);
+      const requestType = requestTypes.find(rt => rt.id === data.request_type_id);
+      const department = departments.find(d => d.id === data.department_id);
+
+      if (!priority || !requestType) {
+        throw new Error('Dados obrigatórios não encontrados');
+      }
+      
+      // Criar objeto no formato LocalTicket
+      const ticketData = {
+        code: '', // Será gerado pelo backend
+        title: data.title,
+        description: data.description,
+        status: {
+          id: defaultStatus.id,
+          name: defaultStatus.name,
+          color: defaultStatus.color,
+        },
+        priority: {
+          id: priority.id,
+          name: priority.name,
+          color: priority.color,
+        },
+        requestType: {
+          id: requestType.id,
+          name: requestType.name,
+          sla: requestType.sla || 0,
+          color: requestType.color || '#3B82F6',
+        },
+        department: department ? {
+          id: department.id,
+          name: department.name,
+        } : undefined,
+        createdBy: {
+          id: currentUser.id,
+          name: currentUser.name,
+        },
+        updatedBy: {
+          id: currentUser.id,
+          name: currentUser.name,
+        },
+      };
+      
+      // Usar a API de tickets para criar
+      const response = await ticketsApi.create(ticketData as any);
+      return response;
+    },
+    onSuccess: (createdTicket) => {
+      toast({
+        title: "Sucesso",
+        description: `Ticket criado com sucesso! ID: ${createdTicket.id}`,
+      });
+      // Redirecionar para a página de detalhes do ticket criado
+      setLocation(`/ticket/${createdTicket.id}`);
+    },
+    onError: (error) => {
+      console.error("Erro ao criar ticket:", error);
+      toast({
+        title: "Erro",
+        description: error instanceof Error ? error.message : "Erro ao criar ticket. Tente novamente.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Filtrar departamentos baseado no tipo de solicitação
+  const getFilteredDepartments = () => {
+    const selectedRequestType = step2Form.watch("request_type_id");
+    if (!selectedRequestType) {
+      return departments;
+    }
+
+    const requestType = requestTypes.find((rt) => rt.id === selectedRequestType);
+    if (!requestType?.departmentIds || requestType.departmentIds.length === 0) {
+      return departments;
+    }
+
+    // Se o requestType tem departmentIds específicos, filtrar para incluir apenas esses departamentos
+    return departments.filter((dept) => 
+      requestType.departmentIds?.includes(dept.id)
+    );
   };
 
+  // Filtrar tipos de solicitação baseado na busca com useCallback para evitar re-renderizações
+  const getFilteredRequestTypes = useCallback(() => {
+    if (!requestTypeSearch.trim()) {
+      return requestTypes.filter((rt) => rt.isActive);
+    }
+    
+    return requestTypes.filter((rt) =>
+      rt.isActive && (
+        rt.name.toLowerCase().includes(requestTypeSearch.toLowerCase()) ||
+        rt.description?.toLowerCase().includes(requestTypeSearch.toLowerCase())
+      )
+    );
+  }, [requestTypes, requestTypeSearch]);
+
+  // Handler para mudança no input de busca com useCallback
+  const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setRequestTypeSearch(e.target.value);
+  }, []);
+
+  // Navegação entre steps
+  const nextStep = async () => {
+    if (currentStep === 1) {
+      const isValid = await step1Form.trigger();
+      if (isValid) {
+        // Transferir dados do step 1 para o step 2
+        const step1Data = step1Form.getValues();
+        step2Form.setValue("request_type_id", step1Data.request_type_id);
+        setCurrentStep(2);
+      }
+    }
+  };
+
+  const prevStep = () => {
+    if (currentStep > 1) {
+      setCurrentStep(currentStep - 1);
+    }
+  };
+
+  // Lidar com upload de arquivos
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(event.target.files || []);
-    const newAttachments: AttachedFile[] = files.map(file => ({
-      id: Math.random().toString(36).substr(2, 9),
-      name: file.name,
-      size: file.size,
-      type: file.type,
-      file,
-    }));
-    
-    setAttachments(prev => [...prev, ...newAttachments]);
-    
-    // Reset input
+    const files = event.target.files;
+    if (!files) return;
+
+    Array.from(files).forEach((file) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const newFile: AttachedFile = {
+          id: crypto.randomUUID(),
+          name: file.name,
+          size: file.size,
+          type: file.type,
+          content: e.target?.result as string,
+        };
+        setAttachments((prev) => [...prev, newFile]);
+      };
+      reader.readAsDataURL(file);
+    });
+
+    // Reset o input
     if (fileInputRef.current) {
-      fileInputRef.current.value = '';
+      fileInputRef.current.value = "";
     }
   };
 
   const removeAttachment = (id: string) => {
-    setAttachments(prev => prev.filter(att => att.id !== id));
+    setAttachments((prev) => prev.filter((file) => file.id !== id));
   };
 
-  const formatFileSize = (bytes: number) => {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-  };
-
-  const addTag = () => {
-    if (currentTag.trim()) {
-      const currentTags = form.getValues("tags");
-      if (!currentTags.includes(currentTag.trim())) {
-        form.setValue("tags", [...currentTags, currentTag.trim()]);
-      }
-      setCurrentTag("");
-    }
-  };
-
-  const removeTag = (tagToRemove: string) => {
-    const currentTags = form.getValues("tags");
-    form.setValue("tags", currentTags.filter(tag => tag !== tagToRemove));
-  };
-
-  const onSubmit = async (data: FullTicketFormData) => {
-    setIsSubmitting(true);
-    
-    try {
-      // Simular upload dos anexos e criação do ticket
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
+  // Submit final
+  const onSubmit = async (data: Step2FormData) => {
+    if (!currentUser) {
       toast({
-        title: "Ticket criado com sucesso!",
-        description: `Ticket criado com ${attachments.length} anexo(s) e descrição completa.`,
-      });
-      
-      setLocation("/tickets");
-    } catch (error) {
-      toast({
-        title: "Erro ao criar ticket",
-        description: "Tente novamente em alguns instantes.",
+        title: "Erro",
+        description: "Usuário não autenticado",
         variant: "destructive",
       });
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      await createTicketMutation.mutateAsync(data);
+    } catch (error) {
+      console.error("Erro ao criar ticket:", error);
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  // Calcular progresso
+  const progressPercent = (currentStep / 2) * 100;
+
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <Header title="Abertura Completa" />
+    <>
+      <Header 
+        title="Novo Ticket - Formulário Completo"
+        subtitle="Preencha todas as informações necessárias para criar seu ticket"
+      />
       
       <main className="flex-1 overflow-y-auto">
-        <div className="p-4 lg:p-6 space-y-4 lg:space-y-6 pb-20 lg:pb-6">
+        <div className="p-4 sm:p-6 max-w-4xl mx-auto">
+          <Button
+            variant="ghost"
+            onClick={() => setLocation("/my-tickets")}
+            className="mb-4"
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Voltar para Meus Tickets
+          </Button>
           
-          {/* Header com opções */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <Link to="/tickets">
-                <Button variant="ghost" size="sm">
-                  <ArrowLeft className="w-4 h-4" />
-                </Button>
-              </Link>
-              <div>
-                <h1 className="text-xl font-semibold">Abertura Completa</h1>
-                <p className="text-sm text-muted-foreground">Criação detalhada com anexos e formatação</p>
-              </div>
+          {/* Progress Bar */}
+          <div className="space-y-2 mb-6">
+            <div className="flex justify-between text-sm">
+              <span className={currentStep >= 1 ? "font-medium" : "text-muted-foreground"}>
+                1. Tipo de Solicitação
+              </span>
+              <span className={currentStep >= 2 ? "font-medium" : "text-muted-foreground"}>
+                2. Informações Completas
+              </span>
             </div>
-            
-            <Link to="/tickets/new/quick">
-              <Button variant="outline" size="sm">
-                <Zap className="w-4 h-4 mr-2" />
-                Abertura Rápida
-              </Button>
-            </Link>
+            <Progress value={progressPercent} className="h-2" />
           </div>
 
-          {/* Informações Básicas */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Informações Básicas</CardTitle>
-              <CardDescription>
-                Dados principais do ticket
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                  
-                  {/* Título */}
-                  <FormField
-                    control={form.control}
-                    name="title"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Título</FormLabel>
-                        <FormControl>
-                          <Input
-                            data-testid="input-ticket-title"
-                            placeholder="Ex: Implementar nova funcionalidade no sistema"
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+      {/* Loading state */}
+      {(requestTypesLoading || departmentsLoading || prioritiesLoading || statusesLoading) && (
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-center py-8">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+                <p className="text-muted-foreground">Carregando dados...</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
-                  {/* Linha 1: Prioridade, Fila, Tipo */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="priority"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Prioridade</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl>
-                              <SelectTrigger data-testid="select-priority">
-                                <SelectValue placeholder="Prioridade" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="baixa">Baixa</SelectItem>
-                              <SelectItem value="normal">Normal</SelectItem>
-                              <SelectItem value="alta">Alta</SelectItem>
-                              <SelectItem value="urgente">Urgente</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="queueId"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Fila</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl>
-                              <SelectTrigger data-testid="select-queue">
-                                <SelectValue placeholder="Selecione a fila" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="suporte-ti">Suporte TI</SelectItem>
-                              <SelectItem value="infraestrutura">Infraestrutura</SelectItem>
-                              <SelectItem value="desenvolvimento">Desenvolvimento</SelectItem>
-                              <SelectItem value="helpdesk">Help Desk</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="typeId"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Tipo</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl>
-                              <SelectTrigger data-testid="select-type">
-                                <SelectValue placeholder="Selecione o tipo" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="incidente">Incidente</SelectItem>
-                              <SelectItem value="solicitacao">Solicitação</SelectItem>
-                              <SelectItem value="problema">Problema</SelectItem>
-                              <SelectItem value="mudanca">Mudança</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-
-                  {/* Linha 2: Email, Horas Estimadas, Data Limite */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="clientEmail"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Email do Cliente (Opcional)</FormLabel>
-                          <FormControl>
-                            <Input
-                              data-testid="input-client-email"
-                              type="email"
-                              placeholder="cliente@empresa.com"
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="estimatedHours"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Horas Estimadas (Opcional)</FormLabel>
-                          <FormControl>
-                            <Input
-                              data-testid="input-estimated-hours"
-                              type="number"
-                              step="0.5"
-                              min="0"
-                              placeholder="0"
-                              {...field}
-                              onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : undefined)}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="dueDate"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Data Limite (Opcional)</FormLabel>
-                          <FormControl>
-                            <Input
-                              data-testid="input-due-date"
-                              type="datetime-local"
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-
-                  {/* Tags */}
-                  <div className="space-y-3">
-                    <FormLabel>Tags</FormLabel>
-                    <div className="flex flex-wrap gap-2 mb-2">
-                      {form.watch("tags").map((tag, index) => (
-                        <Badge key={index} variant="secondary" className="text-xs">
-                          {tag}
-                          <button
-                            type="button"
-                            onClick={() => removeTag(tag)}
-                            className="ml-1 text-muted-foreground hover:text-foreground"
-                          >
-                            <X className="w-3 h-3" />
-                          </button>
-                        </Badge>
-                      ))}
-                    </div>
-                    <div className="flex gap-2">
-                      <Input
-                        data-testid="input-tag"
-                        placeholder="Digite uma tag e pressione Enter"
-                        value={currentTag}
-                        onChange={(e) => setCurrentTag(e.target.value)}
-                        onKeyPress={(e) => {
-                          if (e.key === 'Enter') {
-                            e.preventDefault();
-                            addTag();
+      {/* Step 1: Seleção de Tipo */}
+      {!requestTypesLoading && !departmentsLoading && !prioritiesLoading && !statusesLoading && currentStep === 1 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Selecione o Tipo de Solicitação</CardTitle>
+            <CardDescription>
+              Escolha o tipo de solicitação para prosseguir com o formulário
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Form {...step1Form}>
+              <form className="space-y-6">
+                {/* Tipo de Solicitação com busca integrada */}
+                <FormField
+                  control={step1Form.control}
+                  name="request_type_id"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Tipo de Solicitação</FormLabel>
+                      <Select 
+                        onValueChange={field.onChange} 
+                        value={field.value}
+                        onOpenChange={(open) => {
+                          if (open) {
+                            setRequestTypeSearch("");
                           }
                         }}
-                      />
-                      <Button type="button" onClick={addTag} size="sm" variant="outline">
-                        Adicionar
-                      </Button>
-                    </div>
-                  </div>
-
-                  {/* Descrição com WYSIWYG */}
-                  <FormField
-                    control={form.control}
-                    name="description"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Descrição Detalhada</FormLabel>
+                      >
                         <FormControl>
-                          <div className="border rounded-md">
-                            <ReactQuill
-                              theme="snow"
-                              value={field.value}
-                              onChange={field.onChange}
-                              modules={quillModules}
-                              className="min-h-[200px]"
+                          <SelectTrigger>
+                            <SelectValue placeholder="Digite para buscar ou selecione o tipo de solicitação" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent 
+                          className="w-full"
+                          style={{ maxHeight: '320px', height: 'auto' }}
+                        >
+                          <div className="sticky top-0 bg-background px-2 py-1 border-b z-10">
+                            <Input
+                              placeholder="Buscar tipo de solicitação..."
+                              value={requestTypeSearch}
+                              onChange={handleSearchChange}
+                              className="h-8"
+                              autoFocus
+                              onClick={(e) => e.stopPropagation()}
+                              onKeyDown={(e) => e.stopPropagation()}
                             />
                           </div>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  {/* Anexos */}
-                  <div className="space-y-3">
-                    <FormLabel>Anexos</FormLabel>
-                    
-                    <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4 lg:p-6 text-center">
-                      <Upload className="w-6 h-6 lg:w-8 lg:h-8 mx-auto text-gray-400 mb-2" />
-                      <p className="text-xs lg:text-sm text-gray-600 dark:text-gray-400 mb-2">
-                        Arraste arquivos aqui ou clique para selecionar
-                      </p>
-                      <input
-                        ref={fileInputRef}
-                        type="file"
-                        multiple
-                        onChange={handleFileUpload}
-                        className="hidden"
-                        data-testid="input-file-upload"
-                      />
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => fileInputRef.current?.click()}
-                      >
-                        <Paperclip className="w-4 h-4 mr-2" />
-                        Selecionar Arquivos
-                      </Button>
-                    </div>
-
-                    {/* Lista de anexos */}
-                    {attachments.length > 0 && (
-                      <div className="space-y-2">
-                        {attachments.map((attachment) => (
-                          <div key={attachment.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                            <div className="flex items-center space-x-3">
-                              {attachment.type.startsWith('image/') ? (
-                                <Image className="w-5 h-5 text-blue-500" />
-                              ) : (
-                                <FileText className="w-5 h-5 text-gray-500" />
-                              )}
-                              <div>
-                                <p className="text-sm font-medium">{attachment.name}</p>
-                                <p className="text-xs text-gray-500">{formatFileSize(attachment.size)}</p>
+                          <div className="overflow-y-auto" style={{ maxHeight: '250px' }}>
+                            {getFilteredRequestTypes().map((type) => (
+                              <SelectItem key={type.id} value={type.id}>
+                                <div className="flex flex-col">
+                                  <div className="font-medium">{type.name}</div>
+                                  {type.description && (
+                                    <div className="text-sm text-muted-foreground">
+                                      {type.description}
+                                    </div>
+                                  )}
+                                </div>
+                              </SelectItem>
+                            ))}
+                            {getFilteredRequestTypes().length === 0 && (
+                              <div className="px-2 py-4 text-sm text-muted-foreground text-center">
+                                Nenhum tipo de solicitação encontrado
                               </div>
-                            </div>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => removeAttachment(attachment.id)}
-                            >
-                              <X className="w-4 h-4" />
-                            </Button>
+                            )}
                           </div>
-                        ))}
-                      </div>
-                    )}
+                        </SelectContent>
+                      </Select>
+                      <FormDescription>
+                        Digite para buscar ou role para encontrar o tipo de solicitação
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <div className="flex justify-end">
+                  <Button onClick={nextStep} disabled={!step1Form.formState.isValid || !step1Form.watch("request_type_id")}>
+                    Próximo
+                    <ChevronRight className="w-4 h-4 ml-2" />
+                  </Button>
+                </div>
+              </form>
+            </Form>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Step 2: Informações Completas */}
+      {!requestTypesLoading && !departmentsLoading && !prioritiesLoading && !statusesLoading && currentStep === 2 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Informações Completas</CardTitle>
+            <CardDescription>
+              Complete todas as informações necessárias para criar o ticket
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Form {...step2Form}>
+              <form onSubmit={step2Form.handleSubmit(onSubmit)} className="space-y-6">
+                {/* Resumo do Step 1 */}
+                <div className="bg-muted/50 p-4 rounded-lg space-y-2">
+                  <h3 className="font-medium">Tipo de solicitação selecionado:</h3>
+                  <div className="text-sm">
+                    <p><strong>{requestTypes.find((rt) => rt.id === step2Form.watch("request_type_id"))?.name}</strong></p>
+                    <p className="text-muted-foreground">{requestTypes.find((rt) => rt.id === step2Form.watch("request_type_id"))?.description}</p>
+                  </div>
+                </div>
+
+                {/* Título */}
+                <FormField
+                  control={step2Form.control}
+                  name="title"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Título</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Descreva brevemente o problema..." {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* Departamento filtrado */}
+                <FormField
+                  control={step2Form.control}
+                  name="department_id"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Departamento</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione o departamento" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {getFilteredDepartments().map((dept) => (
+                            <SelectItem key={dept.id} value={dept.id}>
+                              {dept.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormDescription>
+                        Departamentos disponíveis para este tipo de solicitação
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* Prioridade */}
+                <FormField
+                  control={step2Form.control}
+                  name="priority_id"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Prioridade</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione a prioridade" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {priorities.filter(priority => priority.isActive).map((priority) => (
+                            <SelectItem key={priority.id} value={priority.id}>
+                              <div className="flex items-center">
+                                <Badge 
+                                  className="mr-2" 
+                                  style={{ backgroundColor: priority.color, color: '#fff' }}
+                                >
+                                  {priority.name}
+                                </Badge>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* Descrição */}
+                <FormField
+                  control={step2Form.control}
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Descrição Detalhada</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder="Descreva detalhadamente o problema, erro ou solicitação..."
+                          className="min-h-[120px]"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Seja específico para facilitar o atendimento
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* Atribuir a */}
+                {/* Upload de Arquivos */}
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-sm font-medium">Anexos (Opcional)</label>
+                    <p className="text-sm text-muted-foreground">
+                      Adicione capturas de tela, documentos ou outros arquivos relevantes
+                    </p>
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      <Upload className="w-4 h-4 mr-2" />
+                      Adicionar Arquivo
+                    </Button>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      className="hidden"
+                      multiple
+                      onChange={handleFileUpload}
+                      accept="image/*,.pdf,.doc,.docx,.txt"
+                    />
                   </div>
 
-                  {/* Botões */}
-                  <div className="flex flex-col sm:flex-row gap-3 pt-6">
-                    <Button
-                      type="submit"
-                      data-testid="button-submit-full-ticket"
-                      disabled={isSubmitting}
-                      className="flex-1 bg-primary hover:bg-primary-600"
-                    >
-                      <Send className="w-4 h-4 mr-2" />
-                      {isSubmitting ? "Criando..." : "Criar Ticket Completo"}
-                    </Button>
-                    
-                    <Link to="/tickets/new/quick" className="flex-1">
-                      <Button type="button" variant="outline" className="w-full">
-                        <Zap className="w-4 h-4 mr-2" />
-                        Criar Versão Rápida
-                      </Button>
-                    </Link>
-                  </div>
-                </form>
-              </Form>
-            </CardContent>
-          </Card>
+                  {/* Lista de arquivos anexados */}
+                  {attachments.length > 0 && (
+                    <div className="space-y-2">
+                      <h4 className="text-sm font-medium">Arquivos anexados:</h4>
+                      {attachments.map((file) => (
+                        <div
+                          key={file.id}
+                          className="flex items-center justify-between p-2 bg-muted rounded-lg"
+                        >
+                          <div className="flex items-center gap-2">
+                            <FileText className="w-4 h-4" />
+                            <span className="text-sm">{file.name}</span>
+                            <span className="text-xs text-muted-foreground">
+                              ({(file.size / 1024).toFixed(1)} KB)
+                            </span>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeAttachment(file.id)}
+                          >
+                            <X className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Botões de navegação */}
+                <div className="flex justify-between pt-6 border-t">
+                  <Button type="button" variant="outline" onClick={prevStep}>
+                    <ChevronLeft className="w-4 h-4 mr-2" />
+                    Voltar
+                  </Button>
+                  
+                  <Button type="submit" disabled={isSubmitting}>
+                    {isSubmitting ? "Criando..." : "Criar Ticket"}
+                  </Button>
+                </div>
+              </form>
+            </Form>
+          </CardContent>
+        </Card>
+      )}
         </div>
       </main>
-    </div>
+    </>
   );
 }

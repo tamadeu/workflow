@@ -1,95 +1,108 @@
-import { useState, KeyboardEvent } from "react";
-import { X } from "lucide-react";
-import { Input } from "@/components/ui/input";
-import { cn } from "@/lib/utils";
+import * as React from "react"
+import { X } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
+import { Input } from "@/components/ui/input"
+import { cn } from "@/lib/utils"
 
-interface Tag {
-  id: string;
-  name: string;
-  color: string;
+export interface TagInputProps {
+  placeholder?: string
+  value?: string[]
+  onChange?: (tags: string[]) => void
+  className?: string
+  disabled?: boolean
 }
 
-interface TagInputProps {
-  tags: string[];
-  onTagsChange: (tags: string[]) => void;
-  availableTags?: Tag[];
-  placeholder?: string;
-  className?: string;
-  "data-testid"?: string;
-}
+const TagInput = React.forwardRef<HTMLDivElement, TagInputProps>(
+  ({ placeholder = "Adicionar tag...", value = [], onChange, className, disabled, ...props }, ref) => {
+    const [inputValue, setInputValue] = React.useState("")
+    const [tags, setTags] = React.useState<string[]>(value)
+    const inputRef = React.useRef<HTMLInputElement>(null)
 
-export function TagInput({ 
-  tags, 
-  onTagsChange, 
-  availableTags = [], 
-  placeholder = "Add tag...",
-  className,
-  "data-testid": testId
-}: TagInputProps) {
-  const [inputValue, setInputValue] = useState("");
+    React.useEffect(() => {
+      // Only update if the arrays are actually different
+      if (value.length !== tags.length || value.some((tag, index) => tag !== tags[index])) {
+        setTags(value)
+      }
+    }, [value])
 
-  const addTag = (tagName: string) => {
-    const trimmed = tagName.trim();
-    if (trimmed && !tags.includes(trimmed)) {
-      onTagsChange([...tags, trimmed]);
+    const addTag = (tag: string) => {
+      const trimmedTag = tag.trim()
+      if (trimmedTag && !tags.includes(trimmedTag)) {
+        const newTags = [...tags, trimmedTag]
+        setTags(newTags)
+        onChange?.(newTags)
+      }
+      setInputValue("")
     }
-    setInputValue("");
-  };
 
-  const removeTag = (tagToRemove: string) => {
-    onTagsChange(tags.filter(tag => tag !== tagToRemove));
-  };
-
-  const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter" && inputValue.trim()) {
-      e.preventDefault();
-      addTag(inputValue);
-    } else if (e.key === "Backspace" && !inputValue && tags.length > 0) {
-      removeTag(tags[tags.length - 1]);
+    const removeTag = (tagToRemove: string) => {
+      const newTags = tags.filter(tag => tag !== tagToRemove)
+      setTags(newTags)
+      onChange?.(newTags)
     }
-  };
 
-  const getTagColor = (tagName: string) => {
-    const availableTag = availableTags.find(t => t.name === tagName);
-    return availableTag ? availableTag.color : "#3B82F6";
-  };
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (e.key === "Enter" || e.key === ",") {
+        e.preventDefault()
+        addTag(inputValue)
+      } else if (e.key === "Backspace" && inputValue === "" && tags.length > 0) {
+        removeTag(tags[tags.length - 1])
+      }
+    }
 
-  return (
-    <div className={cn("space-y-2", className)}>
-      {/* Display current tags */}
-      {tags.length > 0 && (
-        <div className="flex flex-wrap gap-2">
-          {tags.map((tag) => (
-            <span
-              key={tag}
-              className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
-              style={{
-                backgroundColor: `${getTagColor(tag)}20`,
-                color: getTagColor(tag),
-              }}
-              data-testid={`tag-${tag}`}
-            >
-              {tag}
+    const handleBlur = () => {
+      if (inputValue.trim()) {
+        addTag(inputValue)
+      }
+    }
+
+    return (
+      <div
+        ref={ref}
+        className={cn(
+          "flex min-h-10 w-full flex-wrap gap-2 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2",
+          disabled && "cursor-not-allowed opacity-50",
+          className
+        )}
+        onClick={() => inputRef.current?.focus()}
+        {...props}
+      >
+        {tags.map((tag, index) => (
+          <Badge
+            key={index}
+            variant="secondary"
+            className="gap-1 pr-1 text-xs"
+          >
+            {tag}
+            {!disabled && (
               <button
-                data-testid={`button-remove-tag-${tag}`}
-                onClick={() => removeTag(tag)}
-                className="ml-1 hover:opacity-70"
+                type="button"
+                className="ml-1 rounded-full hover:bg-secondary-foreground/20"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  removeTag(tag)
+                }}
               >
-                <X className="w-3 h-3" />
+                <X className="h-3 w-3" />
               </button>
-            </span>
-          ))}
-        </div>
-      )}
-      
-      {/* Input for new tags */}
-      <Input
-        data-testid={testId}
-        value={inputValue}
-        onChange={(e) => setInputValue(e.target.value)}
-        onKeyDown={handleKeyDown}
-        placeholder={placeholder}
-      />
-    </div>
-  );
-}
+            )}
+          </Badge>
+        ))}
+        <Input
+          ref={inputRef}
+          value={inputValue}
+          onChange={(e) => setInputValue(e.target.value)}
+          onKeyDown={handleKeyDown}
+          onBlur={handleBlur}
+          placeholder={tags.length === 0 ? placeholder : ""}
+          className="flex-1 border-0 p-0 shadow-none outline-none focus-visible:ring-0"
+          disabled={disabled}
+        />
+      </div>
+    )
+  }
+)
+
+TagInput.displayName = "TagInput"
+
+export { TagInput }

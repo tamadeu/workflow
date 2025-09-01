@@ -255,9 +255,8 @@ export default function TicketForm({ onSuccess }: TicketFormProps) {
               <FormLabel>Rótulos</FormLabel>
               <TagInput
                 data-testid="input-labels"
-                tags={selectedLabels}
-                onTagsChange={setSelectedLabels}
-                availableTags={labels?.map(l => ({ id: l.id, name: l.name, color: l.color })) || []}
+                value={selectedLabels}
+                onChange={setSelectedLabels}
                 placeholder="Adicionar rótulo..."
               />
             </FormItem>

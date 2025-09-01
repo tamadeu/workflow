@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { 
@@ -16,36 +16,45 @@ import {
   CheckCircle,
   AlertTriangle,
   Edit3,
-  MoreHorizontal,
   Timer,
   Tag,
-  Info
+  Info,
+  Loader2,
+  Trash2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import SLAIndicator from "@/components/tickets/sla-indicator";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useUser } from "@/hooks/use-user";
 import { cn } from "@/lib/utils";
-import type { Ticket, TicketComment, User, Queue, Label as LabelType } from "@shared/schema";
-
-interface TicketWithDetails extends Ticket {
-  requester?: User;
-  assignee?: User;
-  queue?: Queue;
-  labels?: LabelType[];
-  comments?: (TicketComment & { author?: User })[];
-}
+import { 
+  useTicketQuery, 
+  useTicketWithFullDataQuery,
+  useUpdateTicket,
+  useUpdateTicketStatus, 
+  useUpdateTicketPriority,
+  useAssignTicket,
+  useUnassignTicket,
+  useAddComment,
+  useUpdateComment,
+  useDeleteComment,
+  useAttendTicket
+} from "@/hooks/use-tickets-api";
+import type { LocalTicket } from "@/lib/tickets-api";
+import type { TicketComment, User, Queue, Label as LabelType } from "@shared/schema";
 
 export default function TicketDetails() {
   const { ticketId } = useParams();
@@ -54,164 +63,416 @@ export default function TicketDetails() {
   const [isInternal, setIsInternal] = useState(false);
   const [showInternalComments, setShowInternalComments] = useState(true);
   const [mobileTab, setMobileTab] = useState("thread");
+  const [isEditingTicket, setIsEditingTicket] = useState(false);
+  const [editTitle, setEditTitle] = useState("");
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
+  const [editingCommentContent, setEditingCommentContent] = useState("");
+  const [editingCommentIsInternal, setEditingCommentIsInternal] = useState(false);
   const isMobile = useIsMobile();
 
   const { toast } = useToast();
+  const { user } = useUser();
 
-  // Queries
-  const { data: ticket, isLoading } = useQuery<TicketWithDetails>({
-    queryKey: ["/api/tickets", ticketId],
-    enabled: !!ticketId,
-  });
+  // Usar a nova API de tickets com dados completos
+  const { data: ticketData, isLoading, error } = useTicketWithFullDataQuery(ticketId || "");
+  const ticket = ticketData?.ticket;
+  const ticketStatuses = ticketData?.statuses || [];
+  const ticketPriorities = ticketData?.priorities || [];
+  const availableUsers = ticketData?.users || [];
+  
+  const updateStatusMutation = useUpdateTicketStatus();
+  const updatePriorityMutation = useUpdateTicketPriority();
+  const updateTicketMutation = useUpdateTicket();
+  const assignTicketMutation = useAssignTicket();
+  const unassignTicketMutation = useUnassignTicket();
+  const addCommentMutation = useAddComment();
+  const updateCommentMutation = useUpdateComment();
+  const deleteCommentMutation = useDeleteComment();
+  const attendTicketMutation = useAttendTicket();
 
-  const { data: comments = [] } = useQuery<(TicketComment & { author?: User })[]>({
-    queryKey: ["/api/tickets", ticketId, "comments"],
-    enabled: !!ticketId,
-  });
+  // Filtrar comentários válidos (remover objetos vazios que podem vir da API)
+  const comments = (ticket?.comments || []).filter(comment => 
+    comment && 
+    typeof comment === 'object' && 
+    comment.id && 
+    comment.content
+  );
 
-  const { data: users = [] } = useQuery<User[]>({
-    queryKey: ["/api/users"],
-  });
+  // Inicializar valores de edição quando o ticket carregar
+  useEffect(() => {
+    if (ticket && !isEditingTicket) {
+      setEditTitle(ticket.title);
+    }
+  }, [ticket, isEditingTicket]);
 
-  // Mutations
-  const addCommentMutation = useMutation({
-    mutationFn: async (commentData: { content: string; isInternal: boolean }) => {
-      const response = await fetch(`/api/tickets/${ticketId}/comments`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(commentData),
-      });
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/tickets", ticketId, "comments"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/tickets", ticketId] });
-      setNewComment("");
-      toast({
-        title: "Sucesso",
-        description: "Comentário adicionado com sucesso!",
-      });
-    },
-  });
+  // Sair do modo de edição se não há ticket carregado
+  useEffect(() => {
+    if (!ticket) {
+      setIsEditingTicket(false);
+    }
+  }, [ticket]);
 
-  const updateTicketMutation = useMutation({
-    mutationFn: async (updates: any) => {
-      const response = await fetch(`/api/tickets/${ticketId}`, {
-        method: "PATCH", 
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(updates),
-      });
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/tickets", ticketId] });
-      queryClient.invalidateQueries({ queryKey: ["/api/tickets"] });
-      toast({
-        title: "Sucesso",
-        description: "Chamado atualizado com sucesso!",
-      });
-    },
-  });
+  // Teclas de atalho para edição
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (isEditingTicket) {
+        // Ctrl/Cmd + Enter para salvar
+        if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
+          event.preventDefault();
+          handleSaveEdit();
+        }
+        // Escape para cancelar
+        if (event.key === 'Escape') {
+          event.preventDefault();
+          handleCancelEdit();
+        }
+      }
 
+      // Atalhos para edição de comentários
+      if (editingCommentId) {
+        // Ctrl/Cmd + Enter para salvar comentário
+        if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
+          event.preventDefault();
+          handleSaveEditComment();
+        }
+        // Escape para cancelar edição de comentário
+        if (event.key === 'Escape') {
+          event.preventDefault();
+          handleCancelEditComment();
+        }
+      }
+    };
 
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [isEditingTicket, editTitle, editingCommentId, editingCommentContent]);
 
-  if (isLoading || !ticket) {
+  if (isLoading) {
     return (
       <div className="flex-1 flex items-center justify-center">
         <div className="text-center">
-          <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4" />
           <p className="text-gray-500">Carregando detalhes do chamado...</p>
         </div>
       </div>
     );
   }
 
-  const handleStatusChange = (newStatus: string) => {
-    updateTicketMutation.mutate({ 
-      status: newStatus,
-      ...(newStatus === "resolved" && { resolvedAt: new Date().toISOString() }),
-      ...(newStatus === "closed" && { closedAt: new Date().toISOString() }),
-    });
+  if (error) {
+    return (
+      <div className="flex-1 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-600">Erro ao carregar ticket: {error.message}</p>
+          <Button 
+            variant="outline" 
+            className="mt-4"
+            onClick={() => setLocation("/my-tickets")}
+          >
+            Voltar para tickets
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (isLoading || !ticket) {
+    return (
+      <div className="flex-1 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4" />
+          <p className="text-gray-500">Carregando detalhes do chamado...</p>
+        </div>
+      </div>
+    );
+  }
+
+  const handleStatusChange = async (newStatusId: string) => {
+    try {
+      await updateStatusMutation.mutateAsync({ id: ticket.id, statusId: newStatusId });
+      toast({
+        title: "Sucesso",
+        description: "Status atualizado com sucesso!",
+      });
+    } catch (error) {
+      toast({
+        title: "Erro ao atualizar status",
+        description: "Ocorreu um erro ao atualizar o status.",
+        variant: "destructive",
+      });
+    }
   };
 
-  const handleAssigneeChange = (assigneeId: string) => {
-    updateTicketMutation.mutate({ assigneeId: assigneeId === "unassigned" ? null : assigneeId });
+  const handleAttendTicket = async () => {
+    if (!user) return;
+    
+    try {
+      await attendTicketMutation.mutateAsync({ 
+        id: ticket.id, 
+        statusId: "b825f3e4-7591-11f0-8922-42010a800fc2",
+        userId: user.id
+      });
+      toast({
+        title: "Sucesso",
+        description: "Chamado em atendimento!",
+      });
+    } catch (error) {
+      toast({
+        title: "Erro ao atender chamado",
+        description: "Ocorreu um erro ao iniciar o atendimento do chamado.",
+        variant: "destructive",
+      });
+    }
   };
 
-  const handlePriorityChange = (priority: string) => {
-    updateTicketMutation.mutate({ priority });
+  // Verificar se o usuário pode atender o chamado
+  const canAttendTicket = () => {
+    if (!user || !ticket) return false;
+    
+    // Para admins, sempre pode atender
+    if (user.role === "admin") return true;
+    
+    // Verificar se o department_id do usuário é igual ao responsible_user_department_id do ticket
+    const userProfile = user as any; // Cast temporário para acessar department_id
+    
+    // A regra deve ser: o department_id do usuário logado deve ser igual ao responsible_user_department_id do ticket
+    if (ticket.responsible_user_department_id && userProfile.department_id) {
+      const canAttend = userProfile.department_id === ticket.responsible_user_department_id;
+      
+      return canAttend;
+    }
+    
+    // Se não há informação de departamento do responsável, permitir apenas para admins e agentes
+    return user.role === "agent" || user.role === "admin";
   };
 
-  const handleAddComment = () => {
-    if (!newComment.trim()) return;
-
-    addCommentMutation.mutate({
-      content: newComment,
-      isInternal,
-    });
+  // Verificar se o ticket já foi iniciado (first_response não é null)
+  // Verificar se a primeira resposta foi dada (se first_response não é null)
+  const hasFirstResponse = () => {
+    return ticket?.firstResponseAt !== null && ticket?.firstResponseAt !== undefined;
   };
 
+  // Verificar se pode interagir com o ticket (comentários e controles)
+  const canInteractWithTicket = () => {
+    return hasFirstResponse() && canAttendTicket();
+  };
 
+  const handleAssigneeChange = async (userId: string) => {
+    try {
+      if (userId === "unassigned") {
+        await unassignTicketMutation.mutateAsync(ticket.id);
+      } else {
+        await assignTicketMutation.mutateAsync({ id: ticket.id, userId });
+      }
+      toast({
+        title: "Sucesso",
+        description: "Responsável atualizado com sucesso!",
+      });
+    } catch (error) {
+      toast({
+        title: "Erro ao atualizar responsável",
+        description: "Ocorreu um erro ao atualizar o responsável.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handlePriorityChange = async (priorityId: string) => {
+    try {
+      await updatePriorityMutation.mutateAsync({ id: ticket.id, priorityId });
+      toast({
+        title: "Sucesso",
+        description: "Prioridade atualizada com sucesso!",
+      });
+    } catch (error) {
+      toast({
+        title: "Erro ao atualizar prioridade",
+        description: "Ocorreu um erro ao atualizar a prioridade.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleAddComment = async () => {
+    if (!newComment.trim() || !ticket) return;
+
+    try {
+      await addCommentMutation.mutateAsync({
+        ticketId: ticket.id,
+        content: newComment,
+        isInternal,
+      });
+      
+      setNewComment("");
+      
+      toast({
+        title: "Sucesso",
+        description: "Comentário adicionado com sucesso!",
+      });
+    } catch (error) {
+      toast({
+        title: "Erro ao adicionar comentário",
+        description: "Ocorreu um erro ao adicionar o comentário.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleStartEditComment = (comment: any) => {
+    // Se já estiver editando outro comentário, cancelar a edição atual
+    if (editingCommentId && editingCommentId !== comment.id) {
+      handleCancelEditComment();
+    }
+    
+    setEditingCommentId(comment.id);
+    setEditingCommentContent(comment.content);
+    setEditingCommentIsInternal(comment.isInternal);
+  };
+
+  const handleCancelEditComment = () => {
+    setEditingCommentId(null);
+    setEditingCommentContent("");
+    setEditingCommentIsInternal(false);
+  };
+
+  const handleSaveEditComment = async () => {
+    if (!editingCommentId || !editingCommentContent.trim() || !ticket) return;
+
+    try {
+      await updateCommentMutation.mutateAsync({
+        commentId: editingCommentId,
+        content: editingCommentContent,
+        isInternal: editingCommentIsInternal,
+        ticketId: ticket.id,
+      });
+      
+      setEditingCommentId(null);
+      setEditingCommentContent("");
+      setEditingCommentIsInternal(false);
+      
+      toast({
+        title: "Sucesso",
+        description: "Comentário atualizado com sucesso!",
+      });
+    } catch (error) {
+      toast({
+        title: "Erro ao atualizar comentário",
+        description: "Ocorreu um erro ao atualizar o comentário.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteComment = async (commentId: string) => {
+    if (!ticket) return;
+
+    const confirmed = window.confirm("Tem certeza que deseja excluir este comentário? Esta ação não pode ser desfeita.");
+    
+    if (!confirmed) return;
+
+    try {
+      await deleteCommentMutation.mutateAsync({
+        commentId,
+        ticketId: ticket.id,
+      });
+      
+      toast({
+        title: "Sucesso",
+        description: "Comentário excluído com sucesso!",
+      });
+    } catch (error) {
+      toast({
+        title: "Erro ao excluir comentário",
+        description: "Ocorreu um erro ao excluir o comentário.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const canEditOrDeleteComment = (comment: any): boolean => {
+    if (!user) return false;
+    
+    // Admin pode editar/excluir qualquer comentário
+    if (user.role === "admin") return true;
+    
+    // Usuário pode editar/excluir apenas seus próprios comentários
+    return comment.createdById === user.id;
+  };
+
+  const handleStartEdit = () => {
+    setIsEditingTicket(true);
+    setEditTitle(ticket?.title || "");
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditingTicket(false);
+    setEditTitle(ticket?.title || "");
+  };
+
+  const handleSaveEdit = async () => {
+    if (!ticket || !editTitle.trim()) {
+      toast({
+        title: "Erro de validação",
+        description: "O título do ticket é obrigatório.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      await updateTicketMutation.mutateAsync({
+        id: ticket.id,
+        ticket: {
+          title: editTitle.trim(),
+        },
+      });
+      
+      setIsEditingTicket(false);
+      
+      toast({
+        title: "Sucesso",
+        description: "Ticket atualizado com sucesso!",
+      });
+    } catch (error) {
+      toast({
+        title: "Erro ao atualizar ticket",
+        description: "Ocorreu um erro ao atualizar o ticket.",
+        variant: "destructive",
+      });
+    }
+  };
 
   const filteredComments = showInternalComments 
     ? comments 
     : comments.filter(c => !c.isInternal);
 
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case "critical": return "bg-red-100 text-red-800 border-red-200";
-      case "high": return "bg-orange-100 text-orange-800 border-orange-200";
-      case "medium": return "bg-yellow-100 text-yellow-800 border-yellow-200";
-      case "low": return "bg-green-100 text-green-800 border-green-200";
+  const getPriorityColor = (priorityName: string) => {
+    switch (priorityName.toLowerCase()) {
+      case "crítica": return "bg-red-100 text-red-800 border-red-200";
+      case "alta": return "bg-orange-100 text-orange-800 border-orange-200";
+      case "média": return "bg-yellow-100 text-yellow-800 border-yellow-200";
+      case "baixa": return "bg-green-100 text-green-800 border-green-200";
       default: return "bg-gray-100 text-gray-800 border-gray-200";
     }
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "open": return "bg-blue-100 text-blue-800";
-      case "in_progress": return "bg-yellow-100 text-yellow-800";
-      case "resolved": return "bg-green-100 text-green-800";
-      case "closed": return "bg-gray-100 text-gray-800";
+  const getStatusColor = (statusName: string) => {
+    switch (statusName.toLowerCase()) {
+      case "aberto": return "bg-blue-100 text-blue-800";
+      case "em andamento": return "bg-yellow-100 text-yellow-800";
+      case "resolvido": return "bg-green-100 text-green-800";
+      case "fechado": return "bg-gray-100 text-gray-800";
+      case "pendente": return "bg-blue-100 text-blue-800";
       default: return "bg-gray-100 text-gray-800";
     }
   };
 
-  const getPriorityLabel = (priority: string) => {
-    switch (priority) {
-      case "critical": return "Crítica";
-      case "high": return "Alta";
-      case "medium": return "Média";
-      case "low": return "Baixa";
-      default: return priority;
-    }
+  const getPriorityLabel = (priorityName: string) => {
+    return priorityName;
   };
 
-  const getStatusLabel = (status: string) => {
-    switch (status) {
-      case "open": return "Aberto";
-      case "in_progress": return "Em Andamento";
-      case "resolved": return "Resolvido";
-      case "closed": return "Fechado";
-      default: return status;
-    }
+  const getStatusLabel = (statusName: string) => {
+    return statusName;
   };
-
-  const getSLAProgress = () => {
-    if (!ticket.slaDeadline) return 0;
-    
-    const now = new Date();
-    const deadline = new Date(ticket.slaDeadline);
-    const created = new Date(ticket.createdAt);
-    
-    const totalTime = deadline.getTime() - created.getTime();
-    const elapsedTime = now.getTime() - created.getTime();
-    
-    return Math.min(Math.max((elapsedTime / totalTime) * 100, 0), 100);
-  };
-
-  const slaProgress = getSLAProgress();
-  const hasOverdueSLA = ticket.slaDeadline && new Date() > new Date(ticket.slaDeadline);
 
   const formatTimeSpent = (minutes?: number) => {
     if (!minutes) return "0m";
@@ -226,6 +487,11 @@ export default function TicketDetails() {
   const getInitials = (name?: string) => {
     if (!name) return "??";
     return name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
+  };
+
+  const getUserNameById = (userId: string) => {
+    const user = availableUsers.find(u => u.id === userId);
+    return user?.name;
   };
 
   const formatDate = (date: string | Date) => {
@@ -252,10 +518,8 @@ export default function TicketDetails() {
     return `${diffDays}d atrás`;
   };
 
-  const calculateTimeSpent = (createdAt: string, updatedAt: string) => {
-    const created = new Date(createdAt);
-    const updated = new Date(updatedAt);
-    const diffInMs = updated.getTime() - created.getTime();
+  const calculateTimeSpent = (createdAt: Date, updatedAt: Date) => {
+    const diffInMs = updatedAt.getTime() - createdAt.getTime();
     const diffInMinutes = Math.floor(diffInMs / (1000 * 60));
     
     if (diffInMinutes < 1) return "< 1 min";
@@ -271,6 +535,10 @@ export default function TicketDetails() {
     const days = Math.floor(hours / 24);
     const remainingHours = hours % 24;
     return remainingHours > 0 ? `${days}d ${remainingHours}h` : `${days}d`;
+  };
+
+  const formatTicketCode = (code: string) => {
+    return `TKT-${code}`;
   };
 
   return (
@@ -291,61 +559,59 @@ export default function TicketDetails() {
                 <ArrowLeft className="w-4 h-4 mr-1 sm:mr-2" />
                 <span className="hidden sm:inline">Voltar</span>
               </Button>
-              <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1">
-                <h1 
-                  data-testid="ticket-number"
-                  className="text-lg sm:text-2xl font-bold text-gray-900 truncate"
-                >
-                  #{ticket.number}
-                </h1>
-                <div className="flex flex-wrap gap-1 sm:gap-2">
-                  <Badge className={cn(getPriorityColor(ticket.priority), "text-xs")}>
-                    {ticket.priority === "critical" && <AlertTriangle className="w-3 h-3 mr-1" />}
-                    {isMobile ? ticket.priority.charAt(0).toUpperCase() : getPriorityLabel(ticket.priority)}
-                  </Badge>
-                  {hasOverdueSLA && (
-                    <Badge variant="destructive" className="text-xs">
-                      <AlertTriangle className="w-3 h-3 mr-1" />
-                      {isMobile ? "SLA!" : "SLA Vencido"}
+              <div className="flex flex-col sm:flex-row sm:items-center space-y-1 sm:space-y-0 sm:space-x-3 min-w-0 flex-1">
+                <div className="flex items-center space-x-2 sm:space-x-3">
+                  <h1 
+                    data-testid="ticket-number"
+                    className="text-lg sm:text-xl font-bold text-gray-900 flex-shrink-0"
+                  >
+                    {formatTicketCode(ticket.code)}
+                  </h1>
+                  <div className="flex flex-wrap gap-1 sm:gap-2">
+                    <Badge 
+                      className={cn(getPriorityColor(ticket.priority.name), "text-xs")}
+                      style={{ 
+                        backgroundColor: ticket.priority.color + '20',
+                        color: ticket.priority.color,
+                        borderColor: ticket.priority.color + '40'
+                      }}
+                    >
+                      {ticket.priority.name.toLowerCase() === "crítica" && <AlertTriangle className="w-3 h-3 mr-1" />}
+                      {isMobile ? ticket.priority.name.charAt(0).toUpperCase() : getPriorityLabel(ticket.priority.name)}
                     </Badge>
-                  )}
-                  {ticket.isPaused && (
-                    <Badge variant="secondary" className="text-xs">
-                      <Pause className="w-3 h-3 mr-1" />
-                      {isMobile ? "Pausado" : "Pausado"}
-                    </Badge>
-                  )}
+                  </div>
                 </div>
+                <h2 
+                  data-testid="ticket-title-header"
+                  className="text-sm sm:text-base font-medium text-gray-700 truncate min-w-0"
+                >
+                  {ticket.title}
+                </h2>
               </div>
             </div>
             
             <div className="flex items-center space-x-1 sm:space-x-2 flex-shrink-0">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm">
-                    <MoreHorizontal className="w-4 h-4" />
+              {!isEditingTicket && (
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleStartEdit}
+                  >
+                    <Edit3 className="w-4 h-4" />
                   </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => handleStatusChange(ticket.isPaused ? "in_progress" : "open")}>
-                    {ticket.isPaused ? (
-                      <>
-                        <Play className="w-4 h-4 mr-2" />
-                        Retomar
-                      </>
-                    ) : (
-                      <>
-                        <Pause className="w-4 h-4 mr-2" />
-                        Pausar
-                      </>
-                    )}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem>
-                    <Edit3 className="w-4 h-4 mr-2" />
-                    Editar
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+                  {canAttendTicket() && !hasFirstResponse() && (
+                    <Button
+                      variant="default"
+                      size="sm"
+                      onClick={handleAttendTicket}
+                      disabled={attendTicketMutation.isPending}
+                    >
+                      {attendTicketMutation.isPending ? "Atendendo..." : "Atender Chamado"}
+                    </Button>
+                  )}
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -360,31 +626,60 @@ export default function TicketDetails() {
             <div className="flex-1 flex flex-col pb-20">
               {/* Ticket Title & Description - Always visible */}
               <div className="bg-white border-b border-gray-200 p-4">
-                <h2 className="text-lg font-semibold text-gray-900 mb-3">
-                  {ticket.title}
-                </h2>
-                <p className="text-gray-700 text-sm leading-relaxed whitespace-pre-wrap">
-                  {ticket.description}
-                </p>
+                {isEditingTicket && (
+                  <div className="space-y-4 mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-base font-semibold">Editando Ticket</h3>
+                      <div className="flex items-center space-x-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleCancelEdit}
+                          disabled={updateTicketMutation.isPending}
+                        >
+                          Cancelar
+                        </Button>
+                        <Button
+                          size="sm"
+                          onClick={handleSaveEdit}
+                          disabled={updateTicketMutation.isPending || !editTitle.trim()}
+                        >
+                          {updateTicketMutation.isPending ? "Salvando..." : "Salvar"}
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      <kbd className="px-1 py-0.5 bg-gray-100 rounded">Ctrl+Enter</kbd> para salvar • <kbd className="px-1 py-0.5 bg-gray-100 rounded">Esc</kbd> para cancelar
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">
+                        Título *
+                      </label>
+                      <Input
+                        value={editTitle}
+                        onChange={(e) => setEditTitle(e.target.value)}
+                        className="text-lg font-semibold"
+                        placeholder="Digite o título do ticket..."
+                      />
+                    </div>
+                  </div>
+                )}
                 
-                {/* Labels */}
-                {ticket.labels && ticket.labels.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mt-3">
-                    {ticket.labels.map((label) => (
-                      <Badge
-                        key={label.id}
-                        variant="outline"
-                        style={{
-                          backgroundColor: `${label.color}20`,
-                          borderColor: `${label.color}40`,
-                          color: label.color,
-                        }}
-                        className="text-xs"
-                      >
-                        <Tag className="w-3 h-3 mr-1" />
-                        {label.name}
+                {/* Tipo de Solicitação */}
+                {!isEditingTicket && (
+                  <div>
+                    <div className="flex items-center space-x-2">
+                      <div 
+                        className="w-3 h-3 rounded-full" 
+                        style={{ backgroundColor: ticket.requestType.color }}
+                      />
+                      <span className="text-sm font-medium text-gray-900">
+                        {ticket.requestType.name}
+                      </span>
+                      <Badge variant="outline" className="text-xs">
+                        SLA: {ticket.requestType.sla}min
                       </Badge>
-                    ))}
+                    </div>
                   </div>
                 )}
               </div>
@@ -394,7 +689,7 @@ export default function TicketDetails() {
                 <TabsList className="grid w-full grid-cols-2 bg-gray-50 border-b border-gray-200 rounded-none">
                   <TabsTrigger value="thread" className="flex items-center space-x-2">
                     <MessageCircle className="w-4 h-4" />
-                    <span>Thread ({filteredComments.length})</span>
+                    <span>Comentários ({filteredComments.length})</span>
                   </TabsTrigger>
                   <TabsTrigger value="details" className="flex items-center space-x-2">
                     <Info className="w-4 h-4" />
@@ -404,10 +699,44 @@ export default function TicketDetails() {
 
                 {/* Thread Tab */}
                 <TabsContent value="thread" className="flex-1 flex flex-col overflow-hidden m-0">
+                  {/* Add Comment Form - Now at the top */}
+                  <div className="border-b border-gray-200 p-4 bg-white">
+                    <div className="space-y-3">
+                      <Textarea
+                        data-testid="textarea-comment"
+                        placeholder="Digite seu comentário..."
+                        value={newComment}
+                        onChange={(e) => setNewComment(e.target.value)}
+                        disabled={!canInteractWithTicket()}
+                        className="min-h-[60px] resize-none text-sm"
+                      />
+                      <div className="flex flex-col space-y-2">
+                        <div className="flex items-center space-x-2">
+                          <Switch
+                            checked={isInternal}
+                            onCheckedChange={setIsInternal}
+                            disabled={!canInteractWithTicket()}
+                          />
+                          <label className="text-xs text-gray-600">
+                            Comentário interno
+                          </label>
+                        </div>
+                        <Button
+                          data-testid="button-send-comment"
+                          onClick={handleAddComment}
+                          disabled={!newComment.trim() || addCommentMutation.isPending || !canInteractWithTicket()}
+                          className="w-full"
+                        >
+                          <Send className="w-4 h-4 mr-2" />
+                          {addCommentMutation.isPending ? "Enviando..." : "Enviar"}
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
                   <div className="p-4 border-b border-gray-200 bg-white">
                     <div className="flex items-center justify-between">
                       <h3 className="text-base font-medium">
-                        Conversação ({filteredComments.length})
+                        Comentários ({filteredComments.length})
                       </h3>
                       <div className="flex items-center space-x-1">
                         <EyeOff className="w-3 h-3 text-gray-500" />
@@ -419,7 +748,6 @@ export default function TicketDetails() {
                       </div>
                     </div>
                   </div>
-                  
                   {/* Comments List - Scrollable */}
                   <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
                     {filteredComments.length > 0 ? (
@@ -435,14 +763,13 @@ export default function TicketDetails() {
                         >
                           <Avatar className="flex-shrink-0">
                             <AvatarFallback className="text-sm">
-                              {getInitials(comment.author?.name)}
+                              {getInitials(comment.createdByName)}
                             </AvatarFallback>
                           </Avatar>
-                          
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center space-x-2 mb-1">
                               <span className="font-medium text-gray-900 text-sm">
-                                {comment.author?.name || "Usuário"}
+                                {comment.createdByName || "Usuário"}
                               </span>
                               <span className="text-xs text-gray-500">
                                 {getTimeAgo(comment.createdAt)}
@@ -452,10 +779,88 @@ export default function TicketDetails() {
                                   Interno
                                 </Badge>
                               )}
+                              {/* Action buttons */}
+                              {canEditOrDeleteComment(comment) && (
+                                <div className="ml-auto flex items-center space-x-1">
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => handleStartEditComment(comment)}
+                                        className="h-6 w-6 p-0"
+                                      >
+                                        <Edit3 className="w-3 h-3" />
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p>Editar comentário</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => handleDeleteComment(comment.id)}
+                                        className="h-6 w-6 p-0 text-red-600 hover:text-red-700"
+                                      >
+                                        <Trash2 className="w-3 h-3" />
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p>Excluir comentário</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </div>
+                              )}
                             </div>
-                            <div className="text-gray-700 text-sm leading-relaxed">
-                              {comment.content}
-                            </div>
+                            {editingCommentId === comment.id ? (
+                              <div className="space-y-2">
+                                <div className="text-xs text-gray-500 bg-blue-50 p-2 rounded border">
+                                  <kbd className="px-1 py-0.5 bg-gray-100 rounded">Ctrl+Enter</kbd> para salvar • <kbd className="px-1 py-0.5 bg-gray-100 rounded">Esc</kbd> para cancelar
+                                </div>
+                                <Textarea
+                                  value={editingCommentContent}
+                                  onChange={(e) => setEditingCommentContent(e.target.value)}
+                                  className="text-sm min-h-[60px]"
+                                  autoFocus
+                                />
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center space-x-2">
+                                    <Switch
+                                      checked={editingCommentIsInternal}
+                                      onCheckedChange={setEditingCommentIsInternal}
+                                    />
+                                    <label className="text-xs text-gray-600">
+                                      Interno
+                                    </label>
+                                  </div>
+                                  <div className="flex items-center space-x-2">
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={handleCancelEditComment}
+                                      className="text-xs h-7"
+                                    >
+                                      Cancelar
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      onClick={handleSaveEditComment}
+                                      disabled={!editingCommentContent.trim() || updateCommentMutation.isPending}
+                                      className="text-xs h-7"
+                                    >
+                                      {updateCommentMutation.isPending ? "Salvando..." : "Salvar"}
+                                    </Button>
+                                  </div>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="text-gray-700 text-sm leading-relaxed">
+                                {comment.content}
+                              </div>
+                            )}
                           </div>
                         </div>
                       ))
@@ -466,41 +871,6 @@ export default function TicketDetails() {
                         <p className="text-xs">Seja o primeiro a comentar!</p>
                       </div>
                     )}
-                  </div>
-                  
-                  {/* Add Comment Form - Fixed at bottom */}
-                  <div className="border-t border-gray-200 p-4 bg-white">
-                    <div className="space-y-3">
-                      <Textarea
-                        data-testid="textarea-comment"
-                        placeholder="Digite seu comentário..."
-                        value={newComment}
-                        onChange={(e) => setNewComment(e.target.value)}
-                        className="min-h-[60px] resize-none text-sm"
-                      />
-                      
-                      <div className="flex flex-col space-y-2">
-                        <div className="flex items-center space-x-2">
-                          <Switch
-                            checked={isInternal}
-                            onCheckedChange={setIsInternal}
-                          />
-                          <label className="text-xs text-gray-600">
-                            Comentário interno
-                          </label>
-                        </div>
-                        
-                        <Button
-                          data-testid="button-send-comment"
-                          onClick={handleAddComment}
-                          disabled={!newComment.trim() || addCommentMutation.isPending}
-                          className="w-full"
-                        >
-                          <Send className="w-4 h-4 mr-2" />
-                          {addCommentMutation.isPending ? "Enviando..." : "Enviar"}
-                        </Button>
-                      </div>
-                    </div>
                   </div>
                 </TabsContent>
 
@@ -514,30 +884,44 @@ export default function TicketDetails() {
                     <CardContent className="space-y-3">
                       <div>
                         <label className="text-xs text-gray-600 block mb-1">Status</label>
-                        <Select value={ticket.status} onValueChange={handleStatusChange}>
+                        <Select 
+                          value={ticket.status.id} 
+                          onValueChange={handleStatusChange}
+                          disabled={!canInteractWithTicket()}
+                        >
                           <SelectTrigger data-testid="select-status-mobile" className="text-sm">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="open">Aberto</SelectItem>
-                            <SelectItem value="in_progress">Em Andamento</SelectItem>
-                            <SelectItem value="resolved">Resolvido</SelectItem>
-                            <SelectItem value="closed">Fechado</SelectItem>
+                            {ticketStatuses
+                              .filter(status => status.isActive)
+                              .map((status) => (
+                                <SelectItem key={status.id} value={status.id}>
+                                  {status.name}
+                                </SelectItem>
+                              ))}
                           </SelectContent>
                         </Select>
                       </div>
 
                       <div>
                         <label className="text-xs text-gray-600 block mb-1">Prioridade</label>
-                        <Select value={ticket.priority} onValueChange={handlePriorityChange}>
+                        <Select 
+                          value={ticket.priority.id} 
+                          onValueChange={handlePriorityChange}
+                          disabled={!canInteractWithTicket()}
+                        >
                           <SelectTrigger data-testid="select-priority-mobile" className="text-sm">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="low">Baixa</SelectItem>
-                            <SelectItem value="medium">Média</SelectItem>
-                            <SelectItem value="high">Alta</SelectItem>
-                            <SelectItem value="critical">Crítica</SelectItem>
+                            {ticketPriorities
+                              .filter(priority => priority.isActive)
+                              .map((priority) => (
+                                <SelectItem key={priority.id} value={priority.id}>
+                                  {priority.name}
+                                </SelectItem>
+                              ))}
                           </SelectContent>
                         </Select>
                       </div>
@@ -545,15 +929,16 @@ export default function TicketDetails() {
                       <div>
                         <label className="text-xs text-gray-600 block mb-1">Responsável</label>
                         <Select 
-                          value={ticket.assigneeId || "unassigned"} 
+                          value={ticket.responsibleUser?.id || "unassigned"} 
                           onValueChange={handleAssigneeChange}
+                          disabled={!canInteractWithTicket()}
                         >
                           <SelectTrigger data-testid="select-assignee-mobile" className="text-sm">
                             <SelectValue placeholder="Não atribuído" />
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="unassigned">Não atribuído</SelectItem>
-                            {users.filter(u => u.role === "agent" || u.role === "admin").map((user) => (
+                            {availableUsers.map((user) => (
                               <SelectItem key={user.id} value={user.id}>
                                 {user.name}
                               </SelectItem>
@@ -565,39 +950,11 @@ export default function TicketDetails() {
                   </Card>
 
                   {/* SLA Progress */}
-                  {ticket.slaDeadline && (
-                    <Card>
-                      <CardHeader className="pb-3">
-                        <CardTitle className="text-sm flex items-center">
-                          <Timer className="w-4 h-4 mr-2" />
-                          SLA
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between text-sm">
-                            <span className="text-gray-600">Progresso</span>
-                            <span className={cn(
-                              "font-medium",
-                              hasOverdueSLA ? "text-red-600" : slaProgress > 80 ? "text-yellow-600" : "text-green-600"
-                            )}>
-                              {Math.round(slaProgress)}%
-                            </span>
-                          </div>
-                          <Progress 
-                            value={slaProgress} 
-                            className={cn(
-                              "h-2",
-                              hasOverdueSLA ? "bg-red-100" : slaProgress > 80 ? "bg-yellow-100" : "bg-green-100"
-                            )}
-                          />
-                          <div className="text-xs text-gray-500">
-                            Prazo: {formatDate(ticket.slaDeadline)}
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  )}
+                  <Card>
+                    <CardContent className="p-4">
+                      <SLAIndicator ticket={ticket} variant="full" />
+                    </CardContent>
+                  </Card>
 
                   {/* Time Tracking */}
                   <Card>
@@ -630,7 +987,7 @@ export default function TicketDetails() {
                         <div>
                           <div className="text-gray-600">Solicitante:</div>
                           <div className="font-medium">
-                            {ticket.requester?.name || `Usuário ${ticket.requesterId.slice(0, 8)}`}
+                            {ticket.createdBy.name}
                           </div>
                         </div>
                       </div>
@@ -642,19 +999,16 @@ export default function TicketDetails() {
                           <div className="font-medium">{formatDate(ticket.createdAt)}</div>
                         </div>
                       </div>
-                      
-                      {ticket.queue && (
-                        <div className="flex items-center space-x-2">
-                          <div 
-                            className="w-4 h-4 rounded-full"
-                            style={{ backgroundColor: ticket.queue.color }}
-                          />
-                          <div>
-                            <div className="text-gray-600">Fila:</div>
-                            <div className="font-medium">{ticket.queue.name}</div>
-                          </div>
+
+                      <div className="flex items-center space-x-2">
+                        <Calendar className="w-4 h-4 text-gray-400" />
+                        <div>
+                          <div className="text-gray-600">Atualizado por:</div>
+                          <div className="font-medium">{ticket.updatedBy.name}</div>
                         </div>
-                      )}
+                      </div>
+                      
+                      {/* Queue info temporarily removed - not available in LocalTicket */}
                     </CardContent>
                   </Card>
                 </TabsContent>
@@ -664,51 +1018,52 @@ export default function TicketDetails() {
             /* Desktop Layout - Original Structure */
             <div className="flex-1 flex overflow-hidden">
               <div className="flex-1 flex flex-col overflow-hidden p-6">
-                {/* Ticket Title & Description */}
-                <Card className="mb-6 flex-shrink-0">
-                  <CardHeader className="pb-6">
-                    <CardTitle 
-                      data-testid="ticket-title" 
-                      className="text-xl leading-tight"
-                    >
-                      {ticket.title}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
-                      {ticket.description}
-                    </p>
-                    
-                    {/* Labels */}
-                    {ticket.labels && ticket.labels.length > 0 && (
-                      <div className="flex flex-wrap gap-2 mt-4">
-                        {ticket.labels.map((label) => (
-                          <Badge
-                            key={label.id}
-                            variant="outline"
-                            style={{
-                              backgroundColor: `${label.color}20`,
-                              borderColor: `${label.color}40`,
-                              color: label.color,
-                            }}
-                            className="text-xs"
-                          >
-                            <Tag className="w-3 h-3 mr-1" />
-                            {label.name}
-                          </Badge>
-                        ))}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-
                 {/* Comments Section - Desktop */}
                 <Card className="flex-1 flex flex-col overflow-hidden">
+                  {/* Add Comment - Desktop (now at the top) */}
+                  <div className="flex-shrink-0 border-b border-gray-200 p-4">
+                    <div className="space-y-3">
+                      <Textarea
+                        data-testid="textarea-comment"
+                        placeholder="Digite seu comentário..."
+                        value={newComment}
+                        onChange={(e) => setNewComment(e.target.value)}
+                        disabled={!canInteractWithTicket()}
+                        className="min-h-[80px] resize-none"
+                      />
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-4">
+                          <div className="flex items-center space-x-2">
+                            <Switch
+                              checked={isInternal}
+                              onCheckedChange={setIsInternal}
+                              disabled={!canInteractWithTicket()}
+                            />
+                            <label className="text-sm text-gray-600">
+                              Comentário interno
+                            </label>
+                          </div>
+                          <Button variant="ghost" size="sm" disabled={!canInteractWithTicket()}>
+                            <Paperclip className="w-4 h-4 mr-2" />
+                            Anexar
+                          </Button>
+                        </div>
+                        <Button
+                          data-testid="button-send-comment"
+                          onClick={handleAddComment}
+                          disabled={!newComment.trim() || addCommentMutation.isPending || !canInteractWithTicket()}
+                        >
+                          <Send className="w-4 h-4 mr-2" />
+                          {addCommentMutation.isPending ? "Enviando..." : "Enviar"}
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
                   <CardHeader className="flex-shrink-0 pb-6">
                     <div className="flex items-center justify-between">
                       <CardTitle className="flex items-center space-x-2">
                         <MessageCircle className="w-5 h-5" />
-                        <span>Conversação ({filteredComments.length})</span>
+                        <span>Comentários ({filteredComments.length})</span>
                       </CardTitle>
                       <div className="flex items-center space-x-3">
                         <div className="flex items-center space-x-2">
@@ -725,7 +1080,6 @@ export default function TicketDetails() {
                       </div>
                     </div>
                   </CardHeader>
-                
                   {/* Comments List - Desktop */}
                   <div className="flex-1 overflow-y-auto p-6 space-y-4">
                     {filteredComments.map((comment) => (
@@ -740,34 +1094,110 @@ export default function TicketDetails() {
                       >
                         <Avatar className="flex-shrink-0">
                           <AvatarFallback className="text-sm">
-                            {getInitials(comment.author?.name)}
+                            {getInitials(comment.createdByName)}
                           </AvatarFallback>
                         </Avatar>
-                        
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center space-x-2 mb-2">
-                            <span className="font-medium text-gray-900">
-                              {comment.author?.name || "Usuário"}
-                            </span>
-                            <span className="text-sm text-gray-500">
-                              {getTimeAgo(comment.createdAt)}
-                            </span>
-                            {comment.isInternal && (
-                              <Badge variant="outline" className="text-xs">
-                                Interno
-                              </Badge>
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center space-x-2">
+                              <span className="font-medium text-gray-900">
+                                {comment.createdByName || "Usuário"}
+                              </span>
+                              <span className="text-sm text-gray-500">
+                                {getTimeAgo(comment.createdAt)}
+                              </span>
+                              {comment.isInternal && (
+                                <Badge variant="outline" className="text-xs">
+                                  Interno
+                                </Badge>
+                              )}
+                            </div>
+                            {/* Action buttons */}
+                            {canEditOrDeleteComment(comment) && (
+                              <div className="flex items-center space-x-1">
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => handleStartEditComment(comment)}
+                                      className="h-8 w-8 p-0"
+                                    >
+                                      <Edit3 className="w-4 h-4" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Editar comentário</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => handleDeleteComment(comment.id)}
+                                      className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Excluir comentário</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </div>
                             )}
                           </div>
-                          <div className="text-gray-700 whitespace-pre-wrap leading-relaxed">
-                            {comment.content}
-                          </div>
-                          <div className="flex items-center justify-between mt-3 text-xs text-gray-500">
-                            <span>{formatDate(comment.createdAt)}</span>
-                          </div>
+                          {editingCommentId === comment.id ? (
+                            <div className="space-y-3">
+                              <div className="text-xs text-gray-500 bg-blue-50 p-3 rounded border">
+                                Pressione <kbd className="px-1 py-0.5 bg-gray-100 rounded">Ctrl+Enter</kbd> para salvar ou <kbd className="px-1 py-0.5 bg-gray-100 rounded">Esc</kbd> para cancelar
+                              </div>
+                              <Textarea
+                                value={editingCommentContent}
+                                onChange={(e) => setEditingCommentContent(e.target.value)}
+                                className="min-h-[80px]"
+                                autoFocus
+                              />
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center space-x-2">
+                                  <Switch
+                                    checked={editingCommentIsInternal}
+                                    onCheckedChange={setEditingCommentIsInternal}
+                                  />
+                                  <label className="text-sm text-gray-600">
+                                    Comentário interno
+                                  </label>
+                                </div>
+                                <div className="flex items-center space-x-2">
+                                  <Button
+                                    variant="outline"
+                                    onClick={handleCancelEditComment}
+                                  >
+                                    Cancelar
+                                  </Button>
+                                  <Button
+                                    onClick={handleSaveEditComment}
+                                    disabled={!editingCommentContent.trim() || updateCommentMutation.isPending}
+                                  >
+                                    {updateCommentMutation.isPending ? "Salvando..." : "Salvar"}
+                                  </Button>
+                                </div>
+                              </div>
+                            </div>
+                          ) : (
+                            <>
+                              <div className="text-gray-700 whitespace-pre-wrap leading-relaxed">
+                                {comment.content}
+                              </div>
+                              <div className="flex items-center justify-between mt-3 text-xs text-gray-500">
+                                <span>{formatDate(comment.createdAt)}</span>
+                              </div>
+                            </>
+                          )}
                         </div>
                       </div>
                     ))}
-                    
                     {filteredComments.length === 0 && (
                       <div className="text-center py-8 text-gray-500">
                         <MessageCircle className="w-12 h-12 mx-auto mb-3 text-gray-300" />
@@ -776,47 +1206,6 @@ export default function TicketDetails() {
                       </div>
                     )}
                   </div>
-                
-                  {/* Add Comment - Desktop */}
-                  <div className="flex-shrink-0 border-t border-gray-200 p-4">
-                    <div className="space-y-3">
-                      <Textarea
-                        data-testid="textarea-comment"
-                        placeholder="Digite seu comentário..."
-                        value={newComment}
-                        onChange={(e) => setNewComment(e.target.value)}
-                        className="min-h-[80px] resize-none"
-                      />
-                      
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-4">
-                          <div className="flex items-center space-x-2">
-                            <Switch
-                              checked={isInternal}
-                              onCheckedChange={setIsInternal}
-                            />
-                            <label className="text-sm text-gray-600">
-                              Comentário interno
-                            </label>
-                          </div>
-                          
-                          <Button variant="ghost" size="sm">
-                            <Paperclip className="w-4 h-4 mr-2" />
-                            Anexar
-                          </Button>
-                        </div>
-                        
-                        <Button
-                          data-testid="button-send-comment"
-                          onClick={handleAddComment}
-                          disabled={!newComment.trim() || addCommentMutation.isPending}
-                        >
-                          <Send className="w-4 h-4 mr-2" />
-                          {addCommentMutation.isPending ? "Enviando..." : "Enviar"}
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
                 </Card>
               </div>
             </div>
@@ -824,47 +1213,62 @@ export default function TicketDetails() {
 
           {/* Sidebar - Desktop only */}
           {!isMobile && (
-            <div className="w-80 bg-gray-50 border-l border-gray-200 p-6 space-y-6 overflow-y-auto">
+            <div className="bg-gray-50 border-l border-gray-200 p-6 space-y-6 overflow-y-auto">
             {/* Status Actions */}
             <Card>
               <CardHeader>
                 <CardTitle className="text-sm">Status</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <Select value={ticket.status} onValueChange={handleStatusChange}>
+                <Select 
+                  value={ticket.status.id} 
+                  onValueChange={handleStatusChange}
+                  disabled={!canInteractWithTicket()}
+                >
                   <SelectTrigger data-testid="select-status">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="open">Aberto</SelectItem>
-                    <SelectItem value="in_progress">Em Andamento</SelectItem>
-                    <SelectItem value="resolved">Resolvido</SelectItem>
-                    <SelectItem value="closed">Fechado</SelectItem>
-                  </SelectContent>
-                </Select>
-
-                <Select value={ticket.priority} onValueChange={handlePriorityChange}>
-                  <SelectTrigger data-testid="select-priority">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="low">Baixa</SelectItem>
-                    <SelectItem value="medium">Média</SelectItem>
-                    <SelectItem value="high">Alta</SelectItem>
-                    <SelectItem value="critical">Crítica</SelectItem>
+                    {ticketStatuses
+                      .filter(status => status.isActive)
+                      .map((status) => (
+                        <SelectItem key={status.id} value={status.id}>
+                          {status.name}
+                        </SelectItem>
+                      ))}
                   </SelectContent>
                 </Select>
 
                 <Select 
-                  value={ticket.assigneeId || "unassigned"} 
+                  value={ticket.priority.id} 
+                  onValueChange={handlePriorityChange}
+                  disabled={!canInteractWithTicket()}
+                >
+                  <SelectTrigger data-testid="select-priority">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ticketPriorities
+                      .filter(priority => priority.isActive)
+                      .map((priority) => (
+                        <SelectItem key={priority.id} value={priority.id}>
+                          {priority.name}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+
+                <Select 
+                  value={ticket.responsibleUser?.id || "unassigned"} 
                   onValueChange={handleAssigneeChange}
+                  disabled={!canInteractWithTicket()}
                 >
                   <SelectTrigger data-testid="select-assignee">
                     <SelectValue placeholder="Não atribuído" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="unassigned">Não atribuído</SelectItem>
-                    {users.filter(u => u.role === "agent" || u.role === "admin").map((user) => (
+                    {availableUsers.map((user) => (
                       <SelectItem key={user.id} value={user.id}>
                         {user.name}
                       </SelectItem>
@@ -874,39 +1278,12 @@ export default function TicketDetails() {
               </CardContent>
             </Card>
 
-            {/* SLA Progress */}
-            {ticket.slaDeadline && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-sm">Progresso SLA</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between text-sm">
-                      <span>Progresso</span>
-                      <span className={cn(
-                        "font-medium",
-                        slaProgress >= 90 ? "text-red-600" :
-                        slaProgress >= 70 ? "text-yellow-600" : "text-green-600"
-                      )}>
-                        {Math.round(slaProgress)}%
-                      </span>
-                    </div>
-                    <Progress 
-                      value={slaProgress} 
-                      className={cn(
-                        "h-2",
-                        slaProgress >= 90 && "bg-red-100",
-                        slaProgress >= 70 && slaProgress < 90 && "bg-yellow-100"
-                      )}
-                    />
-                    <div className="text-xs text-gray-500">
-                      Prazo: {formatDate(ticket.slaDeadline)}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
+            {/* SLA Progress - Desktop */}
+            <Card>
+              <CardContent className="p-6">
+                <SLAIndicator ticket={ticket} variant="full" />
+              </CardContent>
+            </Card>
 
             {/* Time Tracking - Automatic Calculation */}
             <Card>
@@ -935,7 +1312,7 @@ export default function TicketDetails() {
                   <div>
                     <div className="text-gray-600">Solicitante:</div>
                     <div className="font-medium">
-                      {ticket.requester?.name || `Usuário ${ticket.requesterId.slice(0, 8)}`}
+                      {ticket.createdBy.name}
                     </div>
                   </div>
                 </div>
@@ -947,30 +1324,27 @@ export default function TicketDetails() {
                     <div className="font-medium">{formatDate(ticket.createdAt)}</div>
                   </div>
                 </div>
-                
-                {ticket.queue && (
-                  <div className="flex items-center space-x-2">
-                    <div 
-                      className="w-4 h-4 rounded-full"
-                      style={{ backgroundColor: ticket.queue.color }}
-                    />
-                    <div>
-                      <div className="text-gray-600">Fila:</div>
-                      <div className="font-medium">{ticket.queue.name}</div>
-                    </div>
+
+                <div className="flex items-center space-x-2">
+                  <Calendar className="w-4 h-4 text-gray-400" />
+                  <div>
+                    <div className="text-gray-600">Atualizado por:</div>
+                    <div className="font-medium">{ticket.updatedBy.name}</div>
                   </div>
-                )}
+                </div>
                 
-                {ticket.assignee && (
+                      {/* Queue info temporarily removed - not available in LocalTicket */}
+                
+                {ticket.responsibleUser && (
                   <div className="flex items-center space-x-2">
                     <Avatar className="w-4 h-4">
                       <AvatarFallback className="text-xs">
-                        {getInitials(ticket.assignee.name)}
+                        {getInitials(ticket.responsibleUser.name)}
                       </AvatarFallback>
                     </Avatar>
                     <div>
                       <div className="text-gray-600">Responsável:</div>
-                      <div className="font-medium">{ticket.assignee.name}</div>
+                      <div className="font-medium">{ticket.responsibleUser.name}</div>
                     </div>
                   </div>
                 )}
@@ -980,6 +1354,49 @@ export default function TicketDetails() {
           )}
         </div>
       </div>
+
+      {/* Edit Modal for Desktop */}
+      {!isMobile && (
+        <Dialog open={isEditingTicket} onOpenChange={(open) => !open && handleCancelEdit()}>
+          <DialogContent className="sm:max-w-[500px]">
+            <DialogHeader>
+              <DialogTitle>Editar Ticket</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="text-xs text-gray-500">
+                Pressione <kbd className="px-1 py-0.5 bg-gray-100 rounded">Ctrl+Enter</kbd> para salvar ou <kbd className="px-1 py-0.5 bg-gray-100 rounded">Esc</kbd> para cancelar
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Título *
+                </label>
+                <Input
+                  value={editTitle}
+                  onChange={(e) => setEditTitle(e.target.value)}
+                  className="text-lg"
+                  placeholder="Digite o título do ticket..."
+                  autoFocus
+                />
+              </div>
+              <div className="flex justify-end space-x-2">
+                <Button
+                  variant="outline"
+                  onClick={handleCancelEdit}
+                  disabled={updateTicketMutation.isPending}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  onClick={handleSaveEdit}
+                  disabled={updateTicketMutation.isPending || !editTitle.trim()}
+                >
+                  {updateTicketMutation.isPending ? "Salvando..." : "Salvar"}
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }

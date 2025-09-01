@@ -1,7 +1,8 @@
-import { Search, Plus } from "lucide-react";
+import { Search, Plus, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useAuth } from "@/hooks/use-auth";
 import NotificationsDropdown from "@/components/notifications/notifications-dropdown";
 
 interface HeaderProps {
@@ -12,6 +13,7 @@ interface HeaderProps {
 
 export default function Header({ title, subtitle, showNewTicketButton = true }: HeaderProps) {
   const isMobile = useIsMobile();
+  const { logout } = useAuth();
 
   return (
     <header className="bg-white shadow-sm border-b border-gray-200 px-4 lg:px-6 py-3 lg:py-4 flex-shrink-0">
@@ -27,6 +29,17 @@ export default function Header({ title, subtitle, showNewTicketButton = true }: 
           <div className="flex items-center space-x-2 ml-3">
             {/* Notifications */}
             <NotificationsDropdown />
+            
+            {/* Logout Button */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={logout}
+              className="text-gray-500 hover:text-red-600"
+              title="Sair"
+            >
+              <LogOut className="w-4 h-4" />
+            </Button>
           </div>
         </div>
       ) : (
@@ -63,6 +76,17 @@ export default function Header({ title, subtitle, showNewTicketButton = true }: 
                 Novo Chamado
               </Button>
             )}
+            
+            {/* Logout Button */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={logout}
+              className="text-gray-500 hover:text-red-600"
+              title="Sair"
+            >
+              <LogOut className="w-4 h-4" />
+            </Button>
           </div>
         </div>
       )}
